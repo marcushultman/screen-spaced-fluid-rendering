@@ -1,0 +1,33 @@
+﻿Build started 10/07/2014 13:16:43.
+     1>Project "C:\Users\Marcus\Documents\GitHub\ScreenSpacedFluidRendering\ScreenSpacedFluidRendering\ScreenSpacedFluidRendering.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /I"..\glew-1.10.0\include" /I"..\glfw-3.0.4.bin.WIN32\include" /I..\glm /I"..\assimp--3.0.1270-sdk\include" /I"..\ResIL-1.8.2-win32\include" /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+     1>c:\program files (x86)\windows kits\8.1\include\shared\minwindef.h(130): warning C4005: 'APIENTRY' : macro redefinition
+                 c:\users\marcus\documents\github\screenspacedfluidrendering\glfw-3.0.4.bin.win32\include\glfw\glfw3.h(92) : see previous definition of 'APIENTRY'
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(167): warning C4305: '-=' : truncation from 'double' to 'float'
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(171): warning C4305: '+=' : truncation from 'double' to 'float'
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(175): warning C4305: '-=' : truncation from 'double' to 'float'
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(179): warning C4305: '+=' : truncation from 'double' to 'float'
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(209): warning C4244: '+=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(210): warning C4244: '+=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(464): warning C4305: 'argument' : truncation from 'double' to 'GLclampf'
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(533): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(541): warning C4244: 'argument' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\marcus\documents\github\screenspacedfluidrendering\screenspacedfluidrendering\main.cpp(548): warning C4305: 'argument' : truncation from 'double' to 'GLclampf'
+         GLM: perspective function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+         GLM: angleAxis function taking degrees as a parameter is deprecated. #define GLM_FORCE_RADIANS before including GLM headers to remove this message.
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Marcus\Documents\GitHub\ScreenSpacedFluidRendering\Debug\ScreenSpacedFluidRendering.exe" /INCREMENTAL /NOLOGO /LIBPATH:"..\glew-1.10.0\lib\Release\Win32" /LIBPATH:"..\glfw-3.0.4.bin.WIN32\lib-msvc120" /LIBPATH:"..\assimp--3.0.1270-sdk\lib\assimp_debug-dll_win32" /LIBPATH:"..\ResIL-1.8.2-win32\x86-msvcrt" opengl32.lib glu32.lib glew32.lib glfw3.lib assimp.lib ILU.lib ILUT.lib ResIL.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\Marcus\Documents\GitHub\ScreenSpacedFluidRendering\Debug\ScreenSpacedFluidRendering.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Marcus\Documents\GitHub\ScreenSpacedFluidRendering\Debug\ScreenSpacedFluidRendering.lib" /MACHINE:X86 Debug\Box.obj
+         Debug\FluidParticle.obj
+         Debug\main.obj
+         Debug\Model.obj
+         Debug\Plane.obj
+         Debug\SkyBox.obj
+         Debug\textfile.obj
+         ScreenSpacedFluidRendering.vcxproj -> C:\Users\Marcus\Documents\GitHub\ScreenSpacedFluidRendering\Debug\ScreenSpacedFluidRendering.exe
+     1>Done Building Project "C:\Users\Marcus\Documents\GitHub\ScreenSpacedFluidRendering\ScreenSpacedFluidRendering\ScreenSpacedFluidRendering.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:01.31
