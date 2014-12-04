@@ -84,18 +84,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Box.cpp" />
+    <ClCompile Include="FirstPersonCamera.cpp" />
     <ClCompile Include="FluidParticle.cpp" />
+    <ClCompile Include="FrameBuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="Plane.cpp" />
+    <ClCompile Include="ShaderProgram.cpp" />
     <ClCompile Include="SkyBox.cpp" />
     <ClCompile Include="textfile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Box.h" />
+    <ClInclude Include="FirstPersonCamera.h" />
     <ClInclude Include="FluidParticle.h" />
+    <ClInclude Include="FrameBuffer.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="Plane.h" />
+    <ClInclude Include="ShaderProgram.h" />
     <ClInclude Include="SkyBox.h" />
     <ClInclude Include="textfile.h" />
   </ItemGroup>

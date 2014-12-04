@@ -64,7 +64,7 @@ const vec3 X_AXIS(1, 0, 0);
 const vec3 Y_AXIS(0, 1, 0);
 const vec3 Z_AXIS(0, 0, 1);
 
-//Camera
+// TODO: Build camera class
 vec3 camPos;
 float camRotationSpeed = 0.075f;
 float camPitch, camYaw;
@@ -75,13 +75,15 @@ vec3 camVelocity;
 
 mat4 view, projection;
 
-float nearPlane = 1.0f, // 0.1f,
-farPlane = 500.0f;
+float nearPlane = 1.0f; // 0.1f,
+float farPlane = 500.0f;
 
 //Camera input
 vec2 previousMousePos;
 
+
 // Post processing
+//GLuint mainBuffer, mainBufferTexture
 GLuint frameBufferObject, 
 	frameBufferTexture, 
 	postProcessShaderProgram;
@@ -102,7 +104,6 @@ vec2 floorSize = vec2(150.0, 150.0);
 Plane* plane;
 
 // Particles
-
 
 FluidParticle* particle;
 vector<vec3> positions;
@@ -461,6 +462,7 @@ void drawFullScreenQuad()
 void draw(float elapsed_time, GLFWwindow* window)
 {
 	// Clear the buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClearColor(0.390625, 0.582031, 0.925781, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -481,7 +483,7 @@ void draw(float elapsed_time, GLFWwindow* window)
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	particle->DrawParticleDataInstanced(view, projection, transforms.size(), &transforms[0]);
+	//particle->DrawParticleDataInstanced(view, projection, transforms.size(), &transforms[0]);
 	/*for (std::vector<vec3>::iterator iter = positions.begin(); iter != positions.end(); iter++)
 	{
 		vec3 pos = *iter;
@@ -534,12 +536,13 @@ void mainLoop(GLFWwindow* window)
 
 		// Draw
 
-		glDisable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glDisable(GL_BLEND);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		draw(elapsed_time, window);
 
+		/*
 		if (renderDepth)
 		{
 			glEnable(GL_BLEND);
@@ -558,6 +561,7 @@ void mainLoop(GLFWwindow* window)
 			drawFullScreenQuad();
 			glUseProgram(0);
 		}
+		*/
 
 		//Swap buffers
 		glfwSwapBuffers(window);
