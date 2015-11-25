@@ -217,3 +217,4 @@ pip-log.txt
 
 screen-spaced-fluid-rendering/resource/envmap_miramar/
 screen-spaced-fluid-rendering/resource/models/
+*.dll
