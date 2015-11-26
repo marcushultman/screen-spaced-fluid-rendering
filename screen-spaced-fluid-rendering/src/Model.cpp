@@ -16,8 +16,8 @@ Model::Model(string path)
 	LoadTextures(folderPath);
 	GenerateVAO();
 
-	vertexFileName = "shaders/assimpmodel.vert";
-	fragmentFileName = "shaders/assimpmodel.frag";
+	vertexFileName = "resource/shaders/assimpmodel.vert";
+	fragmentFileName = "resource/shaders/assimpmodel.frag";
 
 	shaderProgram = CreateShaderProgram();
 }

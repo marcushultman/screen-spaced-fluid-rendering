@@ -23,11 +23,11 @@ class FluidParticle
 private:
 	//vec3 position;
 
-	const char* particleDataVertexShaderFile = "shaders/particledata.vert";
-	const char* particleDataFragmentShaderFile = "shaders/particledata.frag";
+	const char* particleDataVertexShaderFile = "resource/shaders/particledata.vert";
+	const char* particleDataFragmentShaderFile = "resource/shaders/particledata.frag";
 	
-	const char* vertexShaderFile = "shaders/particle.vert";
-	const char* fragmentShaderFile = "shaders/particle.frag";
+	const char* vertexShaderFile = "resource/shaders/particle.vert";
+	const char* fragmentShaderFile = "resource/shaders/particle.frag";
 	GLuint 
 		vertexArrayObject, 
 		shaderProgram;

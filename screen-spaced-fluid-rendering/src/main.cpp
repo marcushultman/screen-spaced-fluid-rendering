@@ -1,86 +1,79 @@
-#pragma region Includes
 
-//Include GLEW
-#include <GL/glew.h>
+// #include "Camera.h"
 
-//Include GLFW
-#include <GLFW/glfw3.h>
-
-//Include GLM
-#include <glm\glm.hpp>
-
-#include <glm\gtc\matrix_transform.hpp>
-#include <glm\gtc\type_ptr.hpp>
-
-//Include the standard C++ headers
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <Windows.h>
 
-#include <fstream>
-#include <map>
 #include <string>
+#include <fstream>
 #include <vector>
+#include <map>
 
-//Reads textfiles
-#include "textfile.h"
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
-//Include Assimp
+#include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtc\type_ptr.hpp>
+
 #include <assimp\cimport.h>
 #include <assimp\scene.h>
 #include <assimp\postprocess.h>
 #include <assimp\vector3.h>
 
-//Include DevIL for image loading
 #include <IL\il.h>
 
-//Include our custom classes
-#include "Model.h"
+#include "textfile.h"
 
+#include "Model.h"
 #include "Box.h"
 #include "SkyBox.h"
 #include "Plane.h"
-
 #include "FluidParticle.h"
-
-using glm::vec2;
-using glm::vec3;
-
-using std::string;
-
-#pragma endregion
-
-#pragma region Function Declarations
-
-// TODO: Fill. Sort the shit.
-
-#pragma endregion
 
 #pragma region Field
 
-//Some constants
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 960
+
+#define NEAR_PLANE 0.1f
+#define FAR_PLANE 500.0f
+#define FOV 0.75f
+
+// TODO: Build camera class
 const vec3 X_AXIS(1, 0, 0);
 const vec3 Y_AXIS(0, 1, 0);
 const vec3 Z_AXIS(0, 0, 1);
-
-// TODO: Build camera class
 vec3 camPos;
-float camRotationSpeed = 0.075f;
+float camRotationSpeed = 0.005f;
 float camPitch, camYaw;
-
 float camNormalSpeed = 100.0f, camHighSpeed = 250.0f, 
 	camSpeed = camNormalSpeed;
 vec3 camVelocity;
-
 mat4 view, projection;
+float nearPlane = NEAR_PLANE; // 0.1f,
+float farPlane = FAR_PLANE;
 
-float nearPlane = 1.0f; // 0.1f,
-float farPlane = 500.0f;
+//static Camera		s_camera;
+static glm::mat4	s_proj;
 
-//Camera input
-vec2 previousMousePos;
+Model* dwarf;
+SkyBox* skybox;
+glm::vec2 floorSize = glm::vec2(150.0, 150.0);
+Plane* plane;
 
+glm::vec2 previousMousePos;
+
+
+// Particle system
+FluidParticle* particle;
+vector<vec3> positions;
+vector<mat4> transforms;
+float particleSize = 6.0f;
+
+bool renderDepth = 0;
 
 // Post processing
 //GLuint mainBuffer, mainBufferTexture
@@ -93,47 +86,17 @@ GLuint particleDataFBO,
 	particleDataDepth,
 	particleDataThickness;
 
-// Dwarf
-Model* dwarf;
-
-// Skybox
-SkyBox* skybox;
-
-// Floor quad
-vec2 floorSize = vec2(150.0, 150.0);
-Plane* plane;
-
-// Particles
-
-FluidParticle* particle;
-vector<vec3> positions;
-vector<mat4> transforms;
-float particleSize = 6.0f;
-
-bool renderDepth = 0;
-
 #pragma endregion
 
-#pragma region Handlers
+#pragma region Event handlers
 
-//Define an error callback
-static void error_callback(int error, const char* description)
+static void onError(int error, const char* description)
 {
 	fputs(description, stderr);
 	_fgetchar();
 }
 
-
-/* Define the key input callback
-*
-*  @param[in] window The window that received the event.
-*  @param[in] key The [keyboard key](@ref keys) that was pressed or released.
-*  @param[in] scancode The system-specific scancode of the key.
-*  @param[in] action @ref GLFW_PRESS, @ref GLFW_RELEASE or @ref GLFW_REPEAT.
-*  @param[in] mods Bit field describing which [modifier keys](@ref mods) were
-*  held down.
-*/
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -199,38 +162,22 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 }
 
-
-/*
-*  @param[in] window The window that received the event.
-*  @param[in] xpos The new x-coordinate, in screen coordinates, of the cursor.
-*  @param[in] ypos The new y-coordinate, in screen coordinates, of the cursor.
-*/
-static void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
+static void onMouseMove(GLFWwindow* window, double xpos, double ypos)
 {
 	camYaw += camRotationSpeed * ((float) xpos - previousMousePos.x);
 	camPitch += camRotationSpeed * ((float) ypos - previousMousePos.y);
 
-	previousMousePos = vec2(xpos, ypos);
+	previousMousePos = glm::vec2(xpos, ypos);
 }
-
-
-/*
-*  @param[in] window The window that received the event.
-*  @param[in] button The [mouse button](@ref buttons) that was pressed or
-*  released.
-*  @param[in] action One of `GLFW_PRESS` or `GLFW_RELEASE`.
-*  @param[in] mods Bit field describing which [modifier keys](@ref mods) were
-*  held down.
-*/
-static void mouse_btn_callback(GLFWwindow* window, int button, int action, int mods)
+static void onMouseDown(GLFWwindow* window, int button, int action, int mods)
 {
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
 		if (action == GLFW_PRESS){
 			double x, y;
 			glfwGetCursorPos(window, &x, &y);
-			previousMousePos = vec2(x, y);
-			glfwSetCursorPosCallback(window, mouse_move_callback);
+			previousMousePos = glm::vec2(x, y);
+			glfwSetCursorPosCallback(window, onMouseMove);
 		}
 		else
 			glfwSetCursorPosCallback(window, NULL);
@@ -240,9 +187,16 @@ static void mouse_btn_callback(GLFWwindow* window, int button, int action, int m
 
 #pragma endregion
 
-#pragma region Initialize
+static void setupCallback(GLFWwindow* window)
+{
+	// Keyboard strokes
+	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetKeyCallback(window, onKeyDown);
 
-void setupDefaultFBO(int width, int height){
+	// Mouse button (which in turn activates mouse movement)
+	glfwSetMouseButtonCallback(window, onMouseDown);
+}
+static void setupDefaultFBO(int width, int height){
 	
 	// Set up renderbuffer
 	glGenFramebuffers(1, &frameBufferObject);
@@ -281,8 +235,8 @@ void setupDefaultFBO(int width, int height){
 		vertexShader = glCreateShader(GL_VERTEX_SHADER);
 		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-		const char * vv = textFileRead("shaders/postprocess.vert");
-		const char * ff = textFileRead("shaders/postprocess.frag");
+		const char * vv = textFileRead("resource/shaders/postprocess.vert");
+		const char * ff = textFileRead("resource/shaders/postprocess.frag");
 
 		glShaderSource(vertexShader, 1, &vv, NULL);
 		glShaderSource(fragmentShader, 1, &ff, NULL);
@@ -331,8 +285,7 @@ void setupDefaultFBO(int width, int height){
 	}
 #pragma endregion
 }
-
-void setupParticleDataFBO(int width, int height){
+static void setupParticleDataFBO(int width, int height){
 
 	// Set up renderbuffer
 	glGenFramebuffers(1, &particleDataFBO);
@@ -372,8 +325,7 @@ void setupParticleDataFBO(int width, int height){
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
-void initialize(GLFWwindow* window)
+static void initialize(GLFWwindow* window)
 {
 	//camPos = vec3(0, 50, 200);
 	camPos = vec3(80, 23, 82);
@@ -382,7 +334,8 @@ void initialize(GLFWwindow* window)
 	glfwGetWindowSize(window, &width, &height);
 
 	// Set up projection matrix
-	projection = glm::perspective(45.0f, float(width) / float(height), nearPlane, farPlane);
+	projection = glm::perspective(FOV, float(width) / float(height),
+		NEAR_PLANE, FAR_PLANE);
 
 	setupDefaultFBO(width, height);
 	setupParticleDataFBO(width, height);
@@ -411,11 +364,7 @@ void initialize(GLFWwindow* window)
 	
 }
 
-#pragma endregion
-
-#pragma region Update
-
-void update(double elapsedTime){
+static void update(double elapsedTime, GLFWwindow* window){
 
 	// Update camera position
 	camPos += camSpeed * (float) elapsedTime * camVelocity *
@@ -426,11 +375,7 @@ void update(double elapsedTime){
 
 }
 
-#pragma endregion
-
-#pragma region Draw
-
-void drawFullScreenQuad()
+static void drawFullScreenQuad()
 {
 	static GLuint vertexArrayObject = 0;
 
@@ -458,8 +403,7 @@ void drawFullScreenQuad()
 	glBindVertexArray(vertexArrayObject);
 	glDrawArrays(GL_QUADS, 0, 4);
 }
-
-void draw(double elapsed_time, GLFWwindow* window)
+static void draw(double elapsed_time, GLFWwindow* window)
 {
 	// Clear the buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -514,8 +458,10 @@ void draw(double elapsed_time, GLFWwindow* window)
 	glUseProgram(0);
 }
 
-#pragma endregion
+static void unload(GLFWwindow* window)
+{
 
+}
 
 #pragma region Main Loop
 
@@ -532,7 +478,7 @@ void mainLoop(GLFWwindow* window)
 		old_time = current_time;
 
 		// Update
-		update(elapsed_time);
+		update(elapsed_time, window);
 
 		// Draw
 
@@ -576,25 +522,11 @@ void mainLoop(GLFWwindow* window)
 
 #pragma region Entry Point
 
-void setupCallback(GLFWwindow* window)
-{
-	// Keyboard strokes
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetKeyCallback(window, key_callback);
-
-	// Mouse button (which in turn activates mouse movement)
-	glfwSetMouseButtonCallback(window, mouse_btn_callback);
-}
-
-/*
-* Very complex stuff, impossible to explain.
-* Mor åt gröt, far åt helvete
-* Sets up GLFW, initializes OpenGL and starts mainLoop.
-*/
+// Very complex stuff, impossible to explain.
 int main(int argc, char *argv [])
 {
 	//Set the error callback
-	glfwSetErrorCallback(error_callback);
+	glfwSetErrorCallback(onError);
 
 	//Initialize GLFW
 	if (!glfwInit())

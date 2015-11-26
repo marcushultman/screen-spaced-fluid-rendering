@@ -16,8 +16,8 @@ using glm::mat4;
 class Plane
 {
 private:
-	const char* vertexShaderFile = "shaders/simple.vert";
-	const char* fragmentShaderFile = "shaders/simple.frag";
+	const char* vertexShaderFile = "resource/shaders/simple.vert";
+	const char* fragmentShaderFile = "resource/shaders/simple.frag";
 	GLuint vao, shaderProgram;
 public:
 	Plane(float);

@@ -19,8 +19,8 @@ void SkyBox::Load()
 	vS = glCreateShader(GL_VERTEX_SHADER);
 	fS = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * vv = textFileRead("shaders/skybox.vert");
-	const char * ff = textFileRead("shaders/skybox.frag");
+	const char * vv = textFileRead("resource/shaders/skybox.vert");
+	const char * ff = textFileRead("resource/shaders/skybox.frag");
 
 	glShaderSource(vS, 1, &vv, NULL);
 	glShaderSource(fS, 1, &ff, NULL);
