@@ -113,7 +113,6 @@
     <None Include="resource\shaders\particle.frag" />
     <None Include="resource\shaders\particle.vert" />
     <None Include="resource\shaders\particledata.frag" />
-    <None Include="resource\shaders\particledata.vert" />
     <None Include="resource\shaders\postprocess.frag" />
     <None Include="resource\shaders\postprocess.vert" />
     <None Include="resource\shaders\simple.frag" />

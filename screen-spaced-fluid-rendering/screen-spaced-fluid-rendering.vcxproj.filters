@@ -94,9 +94,6 @@
     <None Include="resource\shaders\particledata.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resource\shaders\particledata.vert">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
     <None Include="resource\shaders\postprocess.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>

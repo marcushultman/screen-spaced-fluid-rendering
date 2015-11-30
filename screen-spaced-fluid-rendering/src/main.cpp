@@ -69,8 +69,6 @@ glm::vec2 previousMousePos;
 
 // Particle system
 FluidParticle* particle;
-vector<vec3> positions;
-vector<mat4> transforms;
 float particleSize = 6.0f;
 
 bool renderDepth = 0;
@@ -196,6 +194,7 @@ static void setupCallback(GLFWwindow* window)
 	// Mouse button (which in turn activates mouse movement)
 	glfwSetMouseButtonCallback(window, onMouseDown);
 }
+
 static void setupDefaultFBO(int width, int height){
 	
 	// Set up renderbuffer
@@ -285,6 +284,7 @@ static void setupDefaultFBO(int width, int height){
 	}
 #pragma endregion
 }
+
 static void setupParticleDataFBO(int width, int height){
 
 	// Set up renderbuffer
@@ -301,7 +301,8 @@ static void setupParticleDataFBO(int width, int height){
 	// Depth data
 	glGenTextures(1, &particleDataDepth);
 	glBindTexture(GL_TEXTURE_2D, particleDataDepth);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
+		GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -351,17 +352,19 @@ static void initialize(GLFWwindow* window)
 	dwarf = Model::Load("resource/models/X/dwarf.x");
 
 	particle = new FluidParticle(particleSize);
-
 	int num = 8;
 	float distance = 10.0f;
-	const mat4 identity(1);
-	for (int x = -num; x < num; x++)
-		for (int y = 0; y < 3; y++)
+	std::vector<glm::vec3> positions;
+	for (int x = -num; x < num; x++){
+		for (int y = 0; y < 3; y++){
 			for (int z = -num; z < num; z++){
-				transforms.push_back(glm::translate(identity, vec3(distance * x, distance * y, distance * z)));
+				positions.push_back(distance * glm::vec3(x, y, z));
 			}
-	printf("Number of particles: %f\n", transforms.size());
-	
+		}
+	}		
+	particle->SetPositions(positions);
+
+	printf("Number of particles: %d\n", positions.size());
 }
 
 static void update(double elapsedTime, GLFWwindow* window){
@@ -379,6 +382,7 @@ static void drawFullScreenQuad()
 {
 	static GLuint vertexArrayObject = 0;
 
+	// TODO: Move to initialization
 	// do this initialization first time the function is called... somewhat dodgy, but works for demonstration purposes
 	if (vertexArrayObject == 0)
 	{
@@ -405,11 +409,12 @@ static void drawFullScreenQuad()
 }
 static void draw(double elapsed_time, GLFWwindow* window)
 {
-	// Clear the buffer
+	// Clear the main buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClearColor(0.390625f, 0.582031f, 0.925781f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// TODO: Create camera class, obtain view from camera
 	// Update view matrix
 	vec3 center = camPos - Z_AXIS * 
 		glm::angleAxis(camPitch, X_AXIS) * 
@@ -417,43 +422,42 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	view = glm::lookAt(camPos, center, Y_AXIS);
 
 	// Draw backgound scene
-
 	skybox->Draw(view, projection);
 	plane->Draw(view, projection);
 	dwarf->Draw(view, projection);
 
-	// Create particle data
+	/////////////////////////////
+	// DATA PASS
+	/////////////////////////////
+
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//glClear(GL_DEPTH_BUFFER_BIT);
+
 	glBindFramebuffer(GL_FRAMEBUFFER, particleDataFBO);
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//glClearColor(0, 0, 0, 0);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	particle->DrawData(view, projection);
 
-	//particle->DrawParticleDataInstanced(view, projection, transforms.size(), &transforms[0]);
-	/*for (std::vector<vec3>::iterator iter = positions.begin(); iter != positions.end(); iter++)
-	{
-		vec3 pos = *iter;
-		particle->position = pos;
-		particle->DrawParticleData(view, projection);
-	}*/
 
-	// Blur particleDepthData
+	/////////////////////////////
+	// BLUR PASS
+	/////////////////////////////
 
 	// -- CODE GOES HERE --
 
-	// Draw particles
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+	/////////////////////////////
+	// RENDER PASS
+	/////////////////////////////
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, particleDataDepth);
 	glProgramUniform1i(particle->particleDataShaderProgram,
 		glGetUniformLocation(particle->particleDataShaderProgram, "depthBuffer"), 0);
-	
-	particle->DrawInstanced(view, projection, transforms.size(), &transforms[0]);
-	/*for (std::vector<vec3>::iterator iter = positions.begin(); iter != positions.end(); iter++)
-	{
-		vec3 pos = *iter;
-		particle->position = pos;
-		particle->Draw(view, projection);
-	}*/
+	particle->Draw(view, projection);
 
 	glUseProgram(0);
 }
@@ -544,7 +548,10 @@ int main(int argc, char *argv [])
 	GLFWwindow* window;
 
 	//Create a window and create its OpenGL context
-	window = glfwCreateWindow(1280, 960, "Screen Space Fluid Rendering", NULL /*Full-screen: glfwGetPrimaryMonitor()*/, NULL);
+	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT,
+		"Screen Space Fluid Rendering",
+		NULL /* glfwGetPrimaryMonitor() */,
+		NULL);
 
 	//If the window couldn't be created
 	if (!window)

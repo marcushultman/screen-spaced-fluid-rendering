@@ -5,6 +5,9 @@
 
 #include <GL/glew.h>
 
+#include <vector>
+
+#include <glm\glm.hpp>
 #include <glm\matrix.hpp>
 #include <glm\vec3.hpp>
 #include <glm\vec4.hpp>
@@ -23,38 +26,33 @@ class FluidParticle
 private:
 	//vec3 position;
 
-	const char* particleDataVertexShaderFile = "resource/shaders/particledata.vert";
-	const char* particleDataFragmentShaderFile = "resource/shaders/particledata.frag";
-	
-	const char* vertexShaderFile = "resource/shaders/particle.vert";
-	const char* fragmentShaderFile = "resource/shaders/particle.frag";
-	GLuint 
-		vertexArrayObject, 
-		shaderProgram;
+	const char* m_vertexShaderFile = "resource/shaders/particle.vert";
+	const char* m_fragementShaderFile = "resource/shaders/particle.frag";
+	const char* m_fragementDataShaderFile = "resource/shaders/particledata.frag";
 
-	GLuint
-		transformBuffer;
+	GLuint vertexArrayObject, shaderProgram;
+	GLuint transformBuffer;
+
+	std::vector<glm::vec3> m_positions;
+
 public:
-
-	GLuint
-		particleDataShaderProgram;
+	GLuint particleDataShaderProgram;
 
 	FluidParticle(float size);
 	~FluidParticle();
 
-	vec3 position;
+	void SetPositions(std::vector<glm::vec3> positions){
+		m_positions = positions;
 
-	vec3 GetPosition(){
-		return FluidParticle::position;
-	}
-	void SetPosition(vec3 position){
-		FluidParticle::position = position;
+		glBindBuffer(GL_ARRAY_BUFFER, transformBuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * m_positions.size(),
+			&m_positions[0], GL_DYNAMIC_DRAW);
 	}
 
-	void DrawParticleData(mat4 view, mat4 projection);
+	void DrawData(mat4 view, mat4 projection);
 	void Draw(mat4 view, mat4 projection);
 
-	void DrawParticleDataInstanced(mat4 view, mat4 projection, unsigned int numelem, const mat4* transforms);
-	void DrawInstanced(mat4 view, mat4 projection, unsigned int numelem, const mat4* transforms);
+private:
+	void DrawShader(GLuint program, const glm::mat4 view, const glm::mat4 projection);
 };
 

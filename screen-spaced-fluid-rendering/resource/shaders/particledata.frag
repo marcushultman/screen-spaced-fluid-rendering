@@ -30,16 +30,15 @@ void main()
 	vec4 clipSpacePos = projection * pixelPos;
 	gl_FragDepth = clipSpacePos.z / clipSpacePos.w;
 	
+	// Linearized depth
+	float z = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
+	fragColor = vec4(z,z,z,1);
+
+	// Old code for depths?
 	//gl_FragDepth = (gl_FragDepth + 1.0) / (500 + 1 - gl_FragDepth * (500 - 1));
 	//gl_FragDepth = znear * (gl_FragDepth + 1.0) / (zfar + znear - gl_FragDepth * (zfar - znear));
-
-
-
-
 	//gl_FragDepth = (gl_FragDepth - znear) / (zfar - znear);
-	//gl_FragDepth = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
-
-	//float c0 = (1 - zfar / znear) / 2.0;
-	//float c1 = (1 + zfar / znear) / 2.0;
+	// float c0 = (1 - zfar / znear) / 2.0;
+	// float c1 = (1 + zfar / znear) / 2.0;
 	//gl_FragDepth = 1.0 / (c0 * gl_FragDepth + c1);
 }
