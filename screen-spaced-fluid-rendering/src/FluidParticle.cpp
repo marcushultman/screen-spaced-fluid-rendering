@@ -121,13 +121,65 @@ FluidParticle::~FluidParticle()
 {
 }
 
+void FluidParticle::setupFBO(int width, int height){
+
+	// Set up renderbuffer
+	glGenFramebuffers(1, &m_FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
+
+	// Color buffer
+	/*glGenTextures(1, &cbuff);
+	glBindTexture(GL_TEXTURE_2D, cbuff);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
+
+	// Depth data
+	glGenTextures(1, &m_dataTexture);
+	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
+		GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	// Thickess data
+	/*GLuint depthTexture;
+	glGenTextures(1, &depthTexture);
+	glBindTexture(GL_TEXTURE_2D, depthTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+	GL_TEXTURE_2D, depthTexture, 0);*/
+
+	/*glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+	cbuff, 0);*/
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, m_dataTexture, 0);
+
+	// Always check that our framebuffer is ok
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		throw;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
+
 void FluidParticle::DrawData(mat4 view, mat4 projection)
 {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	DrawShader(particleDataShaderProgram, view, projection);
 }
 
 void FluidParticle::Draw(mat4 view, mat4 projection)
 {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
+	glProgramUniform1i(particleDataShaderProgram,
+		glGetUniformLocation(particleDataShaderProgram, "depthBuffer"), 0);
+
 	DrawShader(shaderProgram, view, projection);
 }
 

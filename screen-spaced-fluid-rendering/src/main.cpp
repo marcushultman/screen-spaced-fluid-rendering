@@ -68,21 +68,17 @@ glm::vec2 previousMousePos;
 
 
 // Particle system
-FluidParticle* particle;
+static FluidParticle* s_particleSystem;
 float particleSize = 6.0f;
 
 bool renderDepth = 0;
 
-// Post processing
-//GLuint mainBuffer, mainBufferTexture
-GLuint frameBufferObject, 
-	frameBufferTexture, 
-	postProcessShaderProgram;
 
-// Particle data buffers
-GLuint particleDataFBO,
-	particleDataDepth,
-	particleDataThickness;
+//// Post processing NOT CURRENTLY USED
+//GLuint mainBuffer, mainBufferTexture
+//GLuint frameBufferObject, 
+//	frameBufferTexture, 
+//	postProcessShaderProgram;
 
 #pragma endregion
 
@@ -195,136 +191,96 @@ static void setupCallback(GLFWwindow* window)
 	glfwSetMouseButtonCallback(window, onMouseDown);
 }
 
-static void setupDefaultFBO(int width, int height){
-	
-	// Set up renderbuffer
-	glGenFramebuffers(1, &frameBufferObject);
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
+//static void setupDefaultFBO(int width, int height){
+//	
+//	// Set up renderbuffer
+//	glGenFramebuffers(1, &frameBufferObject);
+//	glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
+//
+//	// Color buffer
+//	glGenTextures(1, &frameBufferTexture);
+//	glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
+//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//	
+//	// Depth buffer
+//	GLuint depthTexture;
+//	glGenTextures(1, &depthTexture);
+//	glBindTexture(GL_TEXTURE_2D, depthTexture);
+//	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//
+//	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+//		frameBufferTexture, 0);
+//	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+//		depthTexture, 0);
+//
+//	// Always check that our framebuffer is ok
+//	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+//		throw;
+//
+//	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//
+//#pragma region Post process shader
+//	{
+//		GLuint vertexShader, fragmentShader;
+//
+//		vertexShader = glCreateShader(GL_VERTEX_SHADER);
+//		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+//
+//		const char * vv = textFileRead("resource/shaders/postprocess.vert");
+//		const char * ff = textFileRead("resource/shaders/postprocess.frag");
+//
+//		glShaderSource(vertexShader, 1, &vv, NULL);
+//		glShaderSource(fragmentShader, 1, &ff, NULL);
+//
+//		int compileOK;
+//
+//		glCompileShader(vertexShader);
+//		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
+//		if (!compileOK) {
+//			GLint infoLogLength;
+//			glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
+//
+//			GLchar* strInfoLog = new GLchar[infoLogLength + 1];
+//			glGetShaderInfoLog(vertexShader, infoLogLength, NULL, strInfoLog);
+//
+//			fprintf(stderr, "Compilation error in vertexShader: %s\n", strInfoLog);
+//			delete [] strInfoLog;
+//
+//			throw;
+//		}
+//
+//		glCompileShader(fragmentShader);
+//		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
+//		if (!compileOK) {
+//			GLint infoLogLength;
+//			glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
+//
+//			GLchar* strInfoLog = new GLchar[infoLogLength + 1];
+//			glGetShaderInfoLog(fragmentShader, infoLogLength, NULL, strInfoLog);
+//
+//			fprintf(stderr, "Compilation error in fragmentShader: %s\n", strInfoLog);
+//			delete [] strInfoLog;
+//
+//			throw;
+//		}
+//
+//		postProcessShaderProgram = glCreateProgram();
+//		glAttachShader(postProcessShaderProgram, vertexShader);
+//		glAttachShader(postProcessShaderProgram, fragmentShader);
+//
+//		glBindAttribLocation(postProcessShaderProgram, 0, "position");
+//		glBindFragDataLocation(postProcessShaderProgram, 0, "fragmentColor");
+//
+//		glLinkProgram(postProcessShaderProgram);
+//		glValidateProgram(postProcessShaderProgram);
+//	}
+//#pragma endregion
+//}
 
-	// Color buffer
-	glGenTextures(1, &frameBufferTexture);
-	glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	
-	// Depth buffer
-	GLuint depthTexture;
-	glGenTextures(1, &depthTexture);
-	glBindTexture(GL_TEXTURE_2D, depthTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		frameBufferTexture, 0);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
-		depthTexture, 0);
-
-	// Always check that our framebuffer is ok
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		throw;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-#pragma region Post process shader
-	{
-		GLuint vertexShader, fragmentShader;
-
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-		const char * vv = textFileRead("resource/shaders/postprocess.vert");
-		const char * ff = textFileRead("resource/shaders/postprocess.frag");
-
-		glShaderSource(vertexShader, 1, &vv, NULL);
-		glShaderSource(fragmentShader, 1, &ff, NULL);
-
-		int compileOK;
-
-		glCompileShader(vertexShader);
-		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
-		if (!compileOK) {
-			GLint infoLogLength;
-			glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-			GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-			glGetShaderInfoLog(vertexShader, infoLogLength, NULL, strInfoLog);
-
-			fprintf(stderr, "Compilation error in vertexShader: %s\n", strInfoLog);
-			delete [] strInfoLog;
-
-			throw;
-		}
-
-		glCompileShader(fragmentShader);
-		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
-		if (!compileOK) {
-			GLint infoLogLength;
-			glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-			GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-			glGetShaderInfoLog(fragmentShader, infoLogLength, NULL, strInfoLog);
-
-			fprintf(stderr, "Compilation error in fragmentShader: %s\n", strInfoLog);
-			delete [] strInfoLog;
-
-			throw;
-		}
-
-		postProcessShaderProgram = glCreateProgram();
-		glAttachShader(postProcessShaderProgram, vertexShader);
-		glAttachShader(postProcessShaderProgram, fragmentShader);
-
-		glBindAttribLocation(postProcessShaderProgram, 0, "position");
-		glBindFragDataLocation(postProcessShaderProgram, 0, "fragmentColor");
-
-		glLinkProgram(postProcessShaderProgram);
-		glValidateProgram(postProcessShaderProgram);
-	}
-#pragma endregion
-}
-
-static void setupParticleDataFBO(int width, int height){
-
-	// Set up renderbuffer
-	glGenFramebuffers(1, &particleDataFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, particleDataFBO);
-	
-	// Color buffer
-	/*glGenTextures(1, &cbuff);
-	glBindTexture(GL_TEXTURE_2D, cbuff);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
-
-	// Depth data
-	glGenTextures(1, &particleDataDepth);
-	glBindTexture(GL_TEXTURE_2D, particleDataDepth);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
-		GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-	// Thickess data
-	/*GLuint depthTexture;
-	glGenTextures(1, &depthTexture);
-	glBindTexture(GL_TEXTURE_2D, depthTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-		GL_TEXTURE_2D, depthTexture, 0);*/
-
-	/*glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-		cbuff, 0);*/
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-		GL_TEXTURE_2D, particleDataDepth, 0);
-
-	// Always check that our framebuffer is ok
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		throw;
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
 
 static void initialize(GLFWwindow* window)
 {
@@ -338,8 +294,8 @@ static void initialize(GLFWwindow* window)
 	projection = glm::perspective(FOV, float(width) / float(height),
 		NEAR_PLANE, FAR_PLANE);
 
-	setupDefaultFBO(width, height);
-	setupParticleDataFBO(width, height);
+	//setupDefaultFBO(width, height);
+	//setupParticleDataFBO(width, height);
 
 	//Skybox
 	skybox = new SkyBox();
@@ -351,7 +307,7 @@ static void initialize(GLFWwindow* window)
 	//Model::Load("resource/models/X/dwarf.x");
 	dwarf = Model::Load("resource/models/X/dwarf.x");
 
-	particle = new FluidParticle(particleSize);
+	s_particleSystem = new FluidParticle(particleSize);
 	int num = 8;
 	float distance = 10.0f;
 	std::vector<glm::vec3> positions;
@@ -362,9 +318,12 @@ static void initialize(GLFWwindow* window)
 			}
 		}
 	}		
-	particle->SetPositions(positions);
-
+	s_particleSystem->SetPositions(positions);
 	printf("Number of particles: %d\n", positions.size());
+
+	// Set up render-to-texture
+	s_particleSystem->setupFBO(width, height);
+
 }
 
 static void update(double elapsedTime, GLFWwindow* window){
@@ -430,14 +389,11 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	// DATA PASS
 	/////////////////////////////
 
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	//glClear(GL_DEPTH_BUFFER_BIT);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, particleDataFBO);
+	//glBindFramebuffer(GL_FRAMEBUFFER, particleDataFBO); // , 0);
 	//glClearColor(0, 0, 0, 0);
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	particle->DrawData(view, projection);
+	//glClear(GL_DEPTH_BUFFER_BIT);
+	s_particleSystem->DrawData(view, projection);
 
 
 	/////////////////////////////
@@ -452,12 +408,8 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	// RENDER PASS
 	/////////////////////////////
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, particleDataDepth);
-	glProgramUniform1i(particle->particleDataShaderProgram,
-		glGetUniformLocation(particle->particleDataShaderProgram, "depthBuffer"), 0);
-	particle->Draw(view, projection);
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//s_particleSystem->Draw(view, projection);
 
 	glUseProgram(0);
 }
@@ -489,7 +441,7 @@ void mainLoop(GLFWwindow* window)
 		//glDisable(GL_BLEND);
 		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		draw(elapsed_time, window);
 
 		/*

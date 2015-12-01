@@ -30,16 +30,20 @@ private:
 	const char* m_fragementShaderFile = "resource/shaders/particle.frag";
 	const char* m_fragementDataShaderFile = "resource/shaders/particledata.frag";
 
-	GLuint vertexArrayObject, shaderProgram;
-	GLuint transformBuffer;
+	GLuint vertexArrayObject, shaderProgram, particleDataShaderProgram;
+	GLuint transformBuffer; // m_buffers[VB_POSITIONS]
+
+	GLuint m_FBO;
+	GLuint m_dataTexture; //, m_additionalTexture;
 
 	std::vector<glm::vec3> m_positions;
 
 public:
-	GLuint particleDataShaderProgram;
 
 	FluidParticle(float size);
 	~FluidParticle();
+
+	void setupFBO(int width, int height);
 
 	void SetPositions(std::vector<glm::vec3> positions){
 		m_positions = positions;
