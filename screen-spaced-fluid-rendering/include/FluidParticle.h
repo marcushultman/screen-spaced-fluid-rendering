@@ -34,7 +34,7 @@ private:
 	GLuint transformBuffer; // m_buffers[VB_POSITIONS]
 
 	GLuint m_FBO;
-	GLuint m_dataTexture; //, m_additionalTexture;
+	GLuint m_dataTexture, m_colorTexture;
 
 	std::vector<glm::vec3> m_positions;
 

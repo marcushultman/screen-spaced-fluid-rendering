@@ -389,10 +389,6 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	// DATA PASS
 	/////////////////////////////
 
-	//glBindFramebuffer(GL_FRAMEBUFFER, particleDataFBO); // , 0);
-	//glClearColor(0, 0, 0, 0);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glClear(GL_DEPTH_BUFFER_BIT);
 	s_particleSystem->DrawData(view, projection);
 
 
@@ -408,8 +404,7 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	// RENDER PASS
 	/////////////////////////////
 
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	//s_particleSystem->Draw(view, projection);
+	s_particleSystem->Draw(view, projection);
 
 	glUseProgram(0);
 }

@@ -128,17 +128,18 @@ void FluidParticle::setupFBO(int width, int height){
 	glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 
 	// Color buffer
-	/*glGenTextures(1, &cbuff);
-	glBindTexture(GL_TEXTURE_2D, cbuff);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+	glGenTextures(1, &m_colorTexture);
+	glBindTexture(GL_TEXTURE_2D, m_colorTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0,
+		GL_RGB, GL_UNSIGNED_BYTE, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);*/
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	// Depth data
 	glGenTextures(1, &m_dataTexture);
 	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0,
-		GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+		GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -149,15 +150,15 @@ void FluidParticle::setupFBO(int width, int height){
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
 	GL_TEXTURE_2D, depthTexture, 0);*/
-
-	/*glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-	cbuff, 0);*/
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-		GL_TEXTURE_2D, m_dataTexture, 0);
+	
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_colorTexture, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_dataTexture, 0);
 
 	// Always check that our framebuffer is ok
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+		printf("There is a problem with the FBO\n");
 		throw;
+	}	
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -166,7 +167,9 @@ void FluidParticle::setupFBO(int width, int height){
 
 void FluidParticle::DrawData(mat4 view, mat4 projection)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
+	glClearColor(1,1,1,1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	DrawShader(particleDataShaderProgram, view, projection);
 }
@@ -175,12 +178,22 @@ void FluidParticle::Draw(mat4 view, mat4 projection)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	glUseProgram(shaderProgram);
+
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
-	glProgramUniform1i(particleDataShaderProgram,
-		glGetUniformLocation(particleDataShaderProgram, "depthBuffer"), 0);
+	glBindTexture(GL_TEXTURE_2D, m_dataTexture); //m_colorTexture);
+	glUniform1i(glGetUniformLocation(shaderProgram, "depthTex"), 0);
 
 	DrawShader(shaderProgram, view, projection);
+
+
+	// DEBUG: blit texture
+	int W = 1280, H = 960;
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBlitFramebuffer(0, 0, W, H,
+		0, 0, W / 4, H / 4, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
 }
 
 void FluidParticle::DrawShader(GLuint program, const glm::mat4 view, const glm::mat4 projection){

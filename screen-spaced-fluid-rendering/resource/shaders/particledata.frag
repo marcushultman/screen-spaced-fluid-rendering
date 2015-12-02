@@ -2,9 +2,9 @@
 
 uniform mat4 view;
 uniform mat4 projection;
+
 uniform float znear;
 uniform float zfar;
-
 uniform float sphereRadius;
 
 in vec2 texCoord;
@@ -15,30 +15,34 @@ layout (location=0) out vec4 fragColor;
 
 void main() 
 {
-	//vec3 lightDir = (vec4(-1, -1, -1, 1) * inverse(view)).xyz;
-
-	// calculate eye-space sphere normal from texture coordinates
-	vec3 N;
-	N.xy = texCoord*2.0-1.0;
-
+	// Eye-space normal from texCoords
+	vec3 N = vec3(texCoord * 2.0 - 1.0, 0);
 	float r2 = dot(N.xy, N.xy);
 	if (r2 > 1) discard; // kill pixels outside circle
-	N.z = sqrt(1.0 - r2 * r2);
+	//N.z = sqrt(1.0 - r2 * r2);
+	N.z = -sqrt(1.0 - r2);
 
-	// calculate depth
-	vec4 pixelPos = vec4(eyeSpacePos + N * sphereRadius, 1.0);
-	vec4 clipSpacePos = projection * pixelPos;
+	// Calculate depth
+	vec4 viewPos = vec4(eyeSpacePos + N * sphereRadius, 1.0);
+	vec4 clipSpacePos = projection * viewPos;
 	gl_FragDepth = clipSpacePos.z / clipSpacePos.w;
-	
-	// Linearized depth
-	float z = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
-	fragColor = vec4(z,z,z,1);
 
-	// Old code for depths?
-	//gl_FragDepth = (gl_FragDepth + 1.0) / (500 + 1 - gl_FragDepth * (500 - 1));
-	//gl_FragDepth = znear * (gl_FragDepth + 1.0) / (zfar + znear - gl_FragDepth * (zfar - znear));
-	//gl_FragDepth = (gl_FragDepth - znear) / (zfar - znear);
-	// float c0 = (1 - zfar / znear) / 2.0;
-	// float c1 = (1 + zfar / znear) / 2.0;
-	//gl_FragDepth = 1.0 / (c0 * gl_FragDepth + c1);
+	// Linearized depth
+	float z = gl_FragDepth;
+	//gl_FragDepth	= (2 * znear) / (zfar + znear - z * (zfar - znear));
+	//z				= (2 * znear) / (zfar + znear - z * (zfar - znear));
+
+	fragColor = vec4(vec3(z), 1);
+	return;
+	
+	// Light direction in world space
+	vec4 lightDir = inverse(view) * vec4(-.2, 1, -1, 0);
+
+	// Water depth
+	float waterDepth = .8 + .05 * (inverse(view) * viewPos).y;
+
+	float ambient = .2;
+	float diff = ambient + (1 - ambient) * max(0.0, dot(N, lightDir.xyz));
+	vec3 color = waterDepth * vec3(.2, .4, .8);
+	fragColor = vec4(diff * color, 1.0);
 }
