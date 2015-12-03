@@ -112,5 +112,11 @@
     <None Include="resource\shaders\skybox.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="resource\shaders\blur.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resource\shaders\blur.vert">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

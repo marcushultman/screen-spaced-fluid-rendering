@@ -20,18 +20,15 @@ void main()
 	float r2 = dot(N.xy, N.xy);
 	if (r2 > 1) discard; // kill pixels outside circle
 	//N.z = sqrt(1.0 - r2 * r2);
-	N.z = -sqrt(1.0 - r2);
+	N.z = sqrt(1.0 - r2);
 
 	// Calculate depth
 	vec4 viewPos = vec4(eyeSpacePos + N * sphereRadius, 1.0);
 	vec4 clipSpacePos = projection * viewPos;
 	gl_FragDepth = clipSpacePos.z / clipSpacePos.w;
 
-	// Linearized depth
-	float z = gl_FragDepth;
-	//gl_FragDepth	= (2 * znear) / (zfar + znear - z * (zfar - znear));
-	//z				= (2 * znear) / (zfar + znear - z * (zfar - znear));
-
+	// Linearized depth in color buffer
+	float z = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
 	fragColor = vec4(vec3(z), 1);
 	return;
 	

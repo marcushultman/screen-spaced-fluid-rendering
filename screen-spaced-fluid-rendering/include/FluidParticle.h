@@ -26,24 +26,41 @@ class FluidParticle
 private:
 	//vec3 position;
 
-	const char* m_vertexShaderFile = "resource/shaders/particle.vert";
-	const char* m_fragementShaderFile = "resource/shaders/particle.frag";
-	const char* m_fragementDataShaderFile = "resource/shaders/particledata.frag";
+	const char* m_vertexShaderFile			= "resource/shaders/particle.vert";
+	const char* m_fragementDataShaderFile	= "resource/shaders/particledata.frag";
+	const char* m_fragementShaderFile		= "resource/shaders/particle.frag";
 
-	GLuint vertexArrayObject, shaderProgram, particleDataShaderProgram;
+	const char* m_fragementBlurVShaderFile	= "resource/shaders/blur.vert";
+	const char* m_fragementBlurShaderFile	= "resource/shaders/blur.frag";
+
+	GLuint vertexArrayObject;
 	GLuint transformBuffer; // m_buffers[VB_POSITIONS]
+	
+	GLuint m_dataFBO, m_blurFBO;
+	float m_width, m_height;
 
-	GLuint m_FBO;
-	GLuint m_dataTexture, m_colorTexture;
+	GLuint m_dataTexture, m_colorTexture; // Geomery pass
+	GLuint m_blurTexture; // Blur pass
+
+	GLuint
+		shaderProgram,
+		particleDataShaderProgram,
+		m_blurProgram;
+
 
 	std::vector<glm::vec3> m_positions;
 
 public:
 
-	FluidParticle(float size);
+	FluidParticle(float size, int width, int height);
 	~FluidParticle();
 
-	void setupFBO(int width, int height);
+	void setupVAO(float size);
+
+	void setupFBO();
+	void setupBlurFBO();
+
+	void setupShaders(float size);
 
 	void SetPositions(std::vector<glm::vec3> positions){
 		m_positions = positions;
@@ -54,9 +71,13 @@ public:
 	}
 
 	void DrawData(mat4 view, mat4 projection);
-	void Draw(mat4 view, mat4 projection);
+	void Draw(mat4 view, mat4 projection, int renderDepth);
+
+	void blur();
 
 private:
 	void DrawShader(GLuint program, const glm::mat4 view, const glm::mat4 projection);
+
+	void drawQuad();
 };
 

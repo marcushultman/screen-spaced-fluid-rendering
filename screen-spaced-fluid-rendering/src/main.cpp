@@ -69,7 +69,8 @@ glm::vec2 previousMousePos;
 
 // Particle system
 static FluidParticle* s_particleSystem;
-float particleSize = 6.0f;
+float particleSize = 5.0f;
+float particleSep = 8.0f;
 
 bool renderDepth = 0;
 
@@ -307,14 +308,13 @@ static void initialize(GLFWwindow* window)
 	//Model::Load("resource/models/X/dwarf.x");
 	dwarf = Model::Load("resource/models/X/dwarf.x");
 
-	s_particleSystem = new FluidParticle(particleSize);
+	s_particleSystem = new FluidParticle(particleSize, width, height);
 	int num = 8;
-	float distance = 10.0f;
 	std::vector<glm::vec3> positions;
 	for (int x = -num; x < num; x++){
 		for (int y = 0; y < 3; y++){
 			for (int z = -num; z < num; z++){
-				positions.push_back(distance * glm::vec3(x, y, z));
+				positions.push_back(particleSep * glm::vec3(x, .75f + y, z));
 			}
 		}
 	}		
@@ -322,7 +322,8 @@ static void initialize(GLFWwindow* window)
 	printf("Number of particles: %d\n", positions.size());
 
 	// Set up render-to-texture
-	s_particleSystem->setupFBO(width, height);
+	s_particleSystem->setupFBO();
+	s_particleSystem->setupBlurFBO();
 
 }
 
@@ -398,14 +399,14 @@ static void draw(double elapsed_time, GLFWwindow* window)
 
 	// -- CODE GOES HERE --
 
-
+	s_particleSystem->blur();
 
 	/////////////////////////////
 	// RENDER PASS
 	/////////////////////////////
 
-	s_particleSystem->Draw(view, projection);
-
+	s_particleSystem->Draw(view, projection,
+		glfwGetKey(window, GLFW_KEY_Z));
 	glUseProgram(0);
 }
 
