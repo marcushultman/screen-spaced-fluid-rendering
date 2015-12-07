@@ -19,7 +19,6 @@ void main()
 	vec3 N = vec3(texCoord * 2.0 - 1.0, 0);
 	float r2 = dot(N.xy, N.xy);
 	if (r2 > 1) discard; // kill pixels outside circle
-	//N.z = sqrt(1.0 - r2 * r2);
 	N.z = sqrt(1.0 - r2);
 
 	// Calculate depth

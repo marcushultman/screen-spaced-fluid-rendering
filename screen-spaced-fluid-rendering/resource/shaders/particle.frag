@@ -8,7 +8,6 @@ uniform float zfar;
 uniform float sphereRadius;
 
 uniform sampler2D depthTex;
-uniform float sampling;
 
 uniform int renderDepth;
 
@@ -39,14 +38,16 @@ void main()
 {
 	vec2 screenSize = textureSize(depthTex, 0);
 	vec2 texelUnit = 1.0 / (screenSize);
-	vec2 screenCoord = gl_FragCoord.xy * texelUnit / sampling;
+	vec2 screenCoord = gl_FragCoord.xy * texelUnit;
 	float depth = texture(depthTex, screenCoord).x;
 	
-	float maxDepth = 1;
-	if (depth >= maxDepth) discard;
+	// Kill pixels outside circle
+	vec2 uv = texCoord * 2.0 - 1.0;
+	if (dot(uv, uv) > 1) discard;
 
 	// Linearize and render
 	if (renderDepth == 1){
+		// Linearized depth
 		depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
 		fragColor = vec4(vec3(depth), 1);
 		return;
@@ -75,7 +76,7 @@ void main()
 	}
 	
 	// calculate normal
-	vec3 N = normalize(cross(ddx, ddy) / sampling);
+	vec3 N = normalize(cross(ddx, ddy));
 	
 	// World space normals
 	N = vec3(inverse(view) * vec4(N, 0));

@@ -94,12 +94,6 @@
     <None Include="resource\shaders\particledata.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resource\shaders\postprocess.frag">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
-    <None Include="resource\shaders\postprocess.vert">
-      <Filter>Resource Files\shaders</Filter>
-    </None>
     <None Include="resource\shaders\simple.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
@@ -115,7 +109,10 @@
     <None Include="resource\shaders\blur.frag">
       <Filter>Resource Files\shaders</Filter>
     </None>
-    <None Include="resource\shaders\blur.vert">
+    <None Include="resource\shaders\quad.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resource\shaders\quad.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
   </ItemGroup>

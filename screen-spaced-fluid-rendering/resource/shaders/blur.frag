@@ -1,11 +1,9 @@
 #version 330
 
 uniform sampler2D source;
-uniform float sampling;
-	
-uniform float offset[5] = float[]( 0.0, 1.0, 2.0, 3.0, 4.0 );
-uniform float weight[5] = float[]( 0.2270270270, 0.1945945946, 0.1216216216,
-                                   0.0540540541, 0.0162162162 );
+
+uniform float offset[3] = float[]( 0.0, 1.3846153846, 3.2307692308 );
+uniform float weight[3] = float[]( 0.2270270270, 0.3162162162, 0.0702702703 );
 uniform bool vertical;
 
 vec2 dCoord(int i){
@@ -16,9 +14,8 @@ vec2 dCoord(int i){
 
 void main()
 {
-	vec2 screenSize = textureSize(source, 0) / sampling;
-	vec2 texelUnit = 1.0f / screenSize;
-	vec2 screenCoord = gl_FragCoord.xy * texelUnit;
+	vec2 screenSize = textureSize(source, 0);
+	vec2 screenCoord = gl_FragCoord.xy / screenSize;
 	float depth = texture(source, screenCoord).x;
 	
 	float maxDepth = 1;
@@ -27,7 +24,7 @@ void main()
 	//gl_FragDepth = depth; return; // uncommment to disable blur
 	
 	depth *= weight[0];
-	for (int i = 1; i < 5; i++) {
+	for (int i = 1; i < 3; i++) {
         depth += texture(source, 
 			(gl_FragCoord.xy + dCoord(i)) / screenSize).x * weight[i];
         depth += texture(source,

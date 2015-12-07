@@ -2,7 +2,7 @@
 
 extern float nearPlane, farPlane;
 
-#define DOWNSAMPLE_SCALAR 1.0f
+#define DOWNSAMPLE_SCALAR 1.5f
 
 // Contructor
 FluidParticle::FluidParticle(float size, int width, int height)
@@ -84,16 +84,16 @@ void FluidParticle::setupFBO(){
 	glBindTexture(GL_TEXTURE_2D, m_colorTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height,
 		0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	// Depth data
 	glGenTextures(1, &m_dataTexture);
 	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width, m_height,
 		0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	// Thickess data
 	/*GLuint depthTexture;
@@ -133,10 +133,12 @@ void FluidParticle::setupBlurFBO()
 
 	glGenTextures(1, &m_blurTexture);
 	glBindTexture(GL_TEXTURE_2D, m_blurTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, m_width / DOWNSAMPLE_SCALAR, m_height / DOWNSAMPLE_SCALAR,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		m_width / DOWNSAMPLE_SCALAR,
+		m_height / DOWNSAMPLE_SCALAR,
 		0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_blurTexture, 0);
 
 	glDrawBuffer(GL_NONE);
@@ -169,92 +171,102 @@ void FluidParticle::setupBlurFBO()
 
 void FluidParticle::setupShaders(float size)
 {
-	GLuint vertexShader, fragmentShader, fragmentDataShader,
-		fragmentBlurVShader, fragmentBlurShader;
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	fragmentDataShader = glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint particleVertexShader, particleFragmentShader, dataFragmentShader,
+		quadVertexShader, quadFragmentShader, blurFragmentShader;
+	particleVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	particleFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	dataFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	fragmentBlurVShader = glCreateShader(GL_VERTEX_SHADER);
-	fragmentBlurShader = glCreateShader(GL_FRAGMENT_SHADER);
+	quadVertexShader = glCreateShader(GL_VERTEX_SHADER);
+	quadFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	blurFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * vertexShaderSource = textFileRead(m_vertexShaderFile);
-	const char * fragmentShaderSource = textFileRead(m_fragementShaderFile);
-	const char * fragmentDataShaderSource = textFileRead(m_fragementDataShaderFile);
+	const char * particleVertexShaderSource		= textFileRead(m_particleVertexShaderFile);
+	const char * particleFragmentShaderSource	= textFileRead(m_particleFragmentShaderFile);
+	const char * dataFragmentShaderSource		= textFileRead(m_dataFragmentShaderFile);
 
-	const char * fragmentBlurVShaderSource = textFileRead(m_fragementBlurVShaderFile);
-	const char * fragmentBlurShaderSource = textFileRead(m_fragementBlurShaderFile);
+	const char * quadVertexShaderSource		= textFileRead(m_quadVertexShaderFile);
+	const char * quadFragmentShaderSource	= textFileRead(m_quadFragmentShaderFile);
+	const char * blurFragmentShaderSource	= textFileRead(m_blurFragmentShaderFile);
 
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	glShaderSource(fragmentDataShader, 1, &fragmentDataShaderSource, NULL);
+	glShaderSource(particleVertexShader, 1, &particleVertexShaderSource, NULL);
+	glShaderSource(particleFragmentShader, 1, &particleFragmentShaderSource, NULL);
+	glShaderSource(dataFragmentShader, 1, &dataFragmentShaderSource, NULL);
 
-	glShaderSource(fragmentBlurVShader, 1, &fragmentBlurVShaderSource, NULL);
-	glShaderSource(fragmentBlurShader, 1, &fragmentBlurShaderSource, NULL);
+	glShaderSource(quadVertexShader, 1, &quadVertexShaderSource, NULL);
+	glShaderSource(quadFragmentShader, 1, &quadFragmentShaderSource, NULL);
+	glShaderSource(blurFragmentShader, 1, &blurFragmentShaderSource, NULL);
 
-	glCompileShader(vertexShader);
-	glCompileShader(fragmentShader);
-	glCompileShader(fragmentDataShader);
+	glCompileShader(particleVertexShader);
+	glCompileShader(particleFragmentShader);
+	glCompileShader(dataFragmentShader);
 
-	glCompileShader(fragmentBlurVShader);
-	glCompileShader(fragmentBlurShader);
+	glCompileShader(quadVertexShader);
+	glCompileShader(quadFragmentShader);
+	glCompileShader(blurFragmentShader);
 
-	int compileOK[5] = { 0, 0, 0, 0, 0 };
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK[0]);
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK[1]);
-	glGetShaderiv(fragmentDataShader, GL_COMPILE_STATUS, &compileOK[2]);
+	int compileOK[6] = { 0, 0, 0, 0, 0, 0 };
+	glGetShaderiv(particleVertexShader, GL_COMPILE_STATUS, &compileOK[0]);
+	glGetShaderiv(particleFragmentShader, GL_COMPILE_STATUS, &compileOK[1]);
+	glGetShaderiv(dataFragmentShader, GL_COMPILE_STATUS, &compileOK[2]);
 
-	glGetShaderiv(fragmentBlurVShader, GL_COMPILE_STATUS, &compileOK[3]);
-	glGetShaderiv(fragmentBlurShader, GL_COMPILE_STATUS, &compileOK[4]);
+	glGetShaderiv(quadVertexShader, GL_COMPILE_STATUS, &compileOK[3]);
+	glGetShaderiv(quadFragmentShader, GL_COMPILE_STATUS, &compileOK[4]);
+	glGetShaderiv(blurFragmentShader, GL_COMPILE_STATUS, &compileOK[5]);
 	
-	if (!(compileOK[0] + compileOK[1] + compileOK[2] + compileOK[3])) {
-		fprintf(stderr, "Compilation error in %s shader\n",
-			(!compileOK[0] ? "Vertex" :
-			(!compileOK[1] ? "Fragement" :
-			(!compileOK[2] ? "Data" : "Blur"))));
-		//GLint infoLogLength;
-		//glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-		//GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-		//glGetShaderInfoLog(vertexShader, infoLogLength, NULL, strInfoLog);
-		throw;
-	}
+	for (unsigned int i = 0; i < 6; i++)
+		if (!compileOK[i])
+			throw;
+	//if (!(compileOK[0] + compileOK[1] + compileOK[2] + compileOK[3])) {
+	//	fprintf(stderr, "Compilation error in %s shader\n",
+	//		(!compileOK[0] ? "Vertex" :
+	//		(!compileOK[1] ? "Fragement" :
+	//		(!compileOK[2] ? "Data" : "Blur"))));
+	//	//GLint infoLogLength;
+	//	//glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
+	//	//GLchar* strInfoLog = new GLchar[infoLogLength + 1];
+	//	//glGetShaderInfoLog(vertexShader, infoLogLength, NULL, strInfoLog);
+	//	throw;
+	//}
 
-	particleDataShaderProgram = glCreateProgram();
-	glAttachShader(particleDataShaderProgram, vertexShader);
-	glAttachShader(particleDataShaderProgram, fragmentDataShader);
+	m_dataProgram = glCreateProgram();
+	glAttachShader(m_dataProgram, particleVertexShader);
+	glAttachShader(m_dataProgram, dataFragmentShader);
 
-	glLinkProgram(particleDataShaderProgram);
-	glValidateProgram(particleDataShaderProgram);
+	glLinkProgram(m_dataProgram);
+	glValidateProgram(m_dataProgram);
 
-	glUseProgram(particleDataShaderProgram);
-	glUniform1f(glGetUniformLocation(particleDataShaderProgram, "sphereRadius"), size);
-	glUniform1f(glGetUniformLocation(particleDataShaderProgram, "znear"), nearPlane);
-	glUniform1f(glGetUniformLocation(particleDataShaderProgram, "zfar"), farPlane);
+	glUseProgram(m_dataProgram);
+	glUniform1f(glGetUniformLocation(m_dataProgram, "sphereRadius"), size);
+	glUniform1f(glGetUniformLocation(m_dataProgram, "znear"), nearPlane);
+	glUniform1f(glGetUniformLocation(m_dataProgram, "zfar"), farPlane);
 
 
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-
-	glLinkProgram(shaderProgram);
-	glValidateProgram(shaderProgram);
-
-	glUseProgram(shaderProgram);
-	glUniform1f(glGetUniformLocation(shaderProgram, "sphereRadius"), size);
-	glUniform1f(glGetUniformLocation(shaderProgram, "znear"), nearPlane);
-	glUniform1f(glGetUniformLocation(shaderProgram, "zfar"), farPlane);
-	glUniform1f(glGetUniformLocation(shaderProgram, "sampling"), DOWNSAMPLE_SCALAR);
+	m_samplingProgram = glCreateProgram();
+	glAttachShader(m_samplingProgram, quadVertexShader);
+	glAttachShader(m_samplingProgram, quadFragmentShader);
+	glLinkProgram(m_samplingProgram);
+	glValidateProgram(m_samplingProgram);
+	glUseProgram(m_samplingProgram);
 
 
 	m_blurProgram = glCreateProgram();
-	glAttachShader(m_blurProgram, fragmentBlurVShader);
-	glAttachShader(m_blurProgram, fragmentBlurShader);
-
+	glAttachShader(m_blurProgram, quadVertexShader);
+	glAttachShader(m_blurProgram, blurFragmentShader);
 	glLinkProgram(m_blurProgram);
 	glValidateProgram(m_blurProgram);
-
 	glUseProgram(m_blurProgram);
-	glUniform1f(glGetUniformLocation(m_blurProgram, "sampling"), DOWNSAMPLE_SCALAR);
+
+
+	m_particleProgram = glCreateProgram();
+	glAttachShader(m_particleProgram, particleVertexShader);
+	glAttachShader(m_particleProgram, particleFragmentShader);
+	glLinkProgram(m_particleProgram);
+	glValidateProgram(m_particleProgram);
+	glUseProgram(m_particleProgram);
+	glUniform1f(glGetUniformLocation(m_particleProgram, "sphereRadius"), size);
+	glUniform1f(glGetUniformLocation(m_particleProgram, "znear"), nearPlane);
+	glUniform1f(glGetUniformLocation(m_particleProgram, "zfar"), farPlane);
 
 	glUseProgram(0);
 }
@@ -267,22 +279,22 @@ void FluidParticle::DrawData(mat4 view, mat4 projection)
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-	DrawShader(particleDataShaderProgram, view, projection);
+	DrawShader(m_dataProgram, view, projection);
 }
 
 void FluidParticle::Draw(mat4 view, mat4 projection, int renderDepth)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glUseProgram(shaderProgram);
+	glUseProgram(m_particleProgram);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_blurTexture); //m_dataTexture); <- m_dataTexture is the upscaled blured version
-	glUniform1i(glGetUniformLocation(shaderProgram, "depthTex"), 0);
+	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "depthTex"), 0);
 
-	glUniform1i(glGetUniformLocation(shaderProgram, "renderDepth"), renderDepth);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "renderDepth"), renderDepth);
 
-	DrawShader(shaderProgram, view, projection);
+	DrawShader(m_particleProgram, view, projection);
 
 
 	// DEBUG: blit texture
@@ -294,9 +306,9 @@ void FluidParticle::Draw(mat4 view, mat4 projection, int renderDepth)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_blurFBO);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBlitFramebuffer(0, 0, m_width / DOWNSAMPLE_SCALAR, m_height / DOWNSAMPLE_SCALAR,
-		m_width / 4, 0, m_width / 2, m_height / 4, GL_COLOR_BUFFER_BIT, GL_NEAREST);*/
+		m_width / 4, 0, m_width / 2, m_height / 4, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-	//glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);*/
 }
 
 void FluidParticle::DrawShader(GLuint program, const glm::mat4 view, const glm::mat4 projection){
@@ -320,45 +332,44 @@ void FluidParticle::DrawShader(GLuint program, const glm::mat4 view, const glm::
 
 void FluidParticle::blur()
 {
-	// Pre-step: Set viewport, bind buffer, clear contents..
-	glViewport(0, 0, m_width / DOWNSAMPLE_SCALAR, m_height / DOWNSAMPLE_SCALAR);
+	glm::vec2 blurSize = glm::vec2(m_width / DOWNSAMPLE_SCALAR, m_height / DOWNSAMPLE_SCALAR);
+
+	// Step 1. Downsample
+	glViewport(0, 0, blurSize.x, blurSize.y);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	// .. bind program, set texture
+	glUseProgram(m_samplingProgram);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(glGetUniformLocation(m_samplingProgram, "source"), 0);
+	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
+	glUniform2f(glGetUniformLocation(m_samplingProgram, "screenSize"), blurSize.x, blurSize.y);
+	drawQuad();
+
+	// Step 2. Blur
 	glUseProgram(m_blurProgram);
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(glGetUniformLocation(m_blurProgram, "source"), 0);
-
-	// Step 1. Bind data texture, sample the full size texture
-	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
-	glUniform1f(glGetUniformLocation(m_blurProgram, "sampling"), DOWNSAMPLE_SCALAR);
-	glUniform1f(glGetUniformLocation(m_blurProgram, "vertical"), 0); drawQuad();
-	glUniform1f(glGetUniformLocation(m_blurProgram, "vertical"), 1); drawQuad();
-
-	// Step 2. Blur multiple times by rendering to the same texture - constant size
 	glBindTexture(GL_TEXTURE_2D, m_blurTexture);
-	glUniform1f(glGetUniformLocation(m_blurProgram, "sampling"), 1);
 	for (unsigned int i = 0, o = 1; i < 16; i++) {
 		glUniform1f(glGetUniformLocation(m_blurProgram, "vertical"), (o = 1 - o));
 		drawQuad();
 	}
 
-	// Step 4. Reset viewport TODO: Upscale texture again
+	// Step 3. Upsample
 	glViewport(0, 0, m_width, m_height);
-	/*glBindFramebuffer(GL_FRAMEBUFFER, m_dataFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_dataFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	glUniform1f(glGetUniformLocation(m_blurProgram, "sampling"), 1 / DOWNSAMPLE_SCALAR);
-	glUniform1f(glGetUniformLocation(m_blurProgram, "vertical"), 0); drawQuad();
-	glUniform1f(glGetUniformLocation(m_blurProgram, "vertical"), 1); drawQuad();*/
-	
+	glUseProgram(m_samplingProgram);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(glGetUniformLocation(m_samplingProgram, "source"), 0);
+	glBindTexture(GL_TEXTURE_2D, m_blurTexture);
+	glUniform2f(glGetUniformLocation(m_samplingProgram, "screenSize"),
+		m_width, m_height);
+	drawQuad();
+
 	glUseProgram(0);
-
-	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	//glViewport(0, 0, m_width, m_height);
-	//glViewport(0, 0, m_width / DOWNSAMPLE_SCALAR, m_height / DOWNSAMPLE_SCALAR);
 }
 
 void FluidParticle::drawQuad()

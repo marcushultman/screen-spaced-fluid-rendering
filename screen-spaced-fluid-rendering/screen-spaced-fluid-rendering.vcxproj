@@ -111,12 +111,11 @@
     <None Include="resource\shaders\assimpmodel.frag" />
     <None Include="resource\shaders\assimpmodel.vert" />
     <None Include="resource\shaders\blur.frag" />
-    <None Include="resource\shaders\blur.vert" />
+    <None Include="resource\shaders\quad.vert" />
     <None Include="resource\shaders\particle.frag" />
     <None Include="resource\shaders\particle.vert" />
     <None Include="resource\shaders\particledata.frag" />
-    <None Include="resource\shaders\postprocess.frag" />
-    <None Include="resource\shaders\postprocess.vert" />
+    <None Include="resource\shaders\quad.frag" />
     <None Include="resource\shaders\simple.frag" />
     <None Include="resource\shaders\simple.vert" />
     <None Include="resource\shaders\skybox.frag" />

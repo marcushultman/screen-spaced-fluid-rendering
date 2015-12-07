@@ -26,12 +26,13 @@ class FluidParticle
 private:
 	//vec3 position;
 
-	const char* m_vertexShaderFile			= "resource/shaders/particle.vert";
-	const char* m_fragementDataShaderFile	= "resource/shaders/particledata.frag";
-	const char* m_fragementShaderFile		= "resource/shaders/particle.frag";
+	const char* m_particleVertexShaderFile		= "resource/shaders/particle.vert";
+	const char* m_particleFragmentShaderFile	= "resource/shaders/particle.frag";
+	const char* m_dataFragmentShaderFile		= "resource/shaders/particledata.frag";
 
-	const char* m_fragementBlurVShaderFile	= "resource/shaders/blur.vert";
-	const char* m_fragementBlurShaderFile	= "resource/shaders/blur.frag";
+	const char* m_quadVertexShaderFile		= "resource/shaders/quad.vert";
+	const char* m_quadFragmentShaderFile	= "resource/shaders/quad.frag";
+	const char* m_blurFragmentShaderFile	= "resource/shaders/blur.frag";
 
 	GLuint vertexArrayObject;
 	GLuint transformBuffer; // m_buffers[VB_POSITIONS]
@@ -43,8 +44,9 @@ private:
 	GLuint m_blurTexture; // Blur pass
 
 	GLuint
-		shaderProgram,
-		particleDataShaderProgram,
+		m_particleProgram,
+		m_dataProgram,
+		m_samplingProgram,
 		m_blurProgram;
 
 
