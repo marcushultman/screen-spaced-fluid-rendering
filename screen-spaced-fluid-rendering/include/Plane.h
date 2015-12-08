@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//Include GLEW
 #include <GL/glew.h>
 
 #include <glm\matrix.hpp>
@@ -11,18 +10,18 @@
 
 #include "textfile.h"
 
-using glm::mat4;
 
 class Plane
 {
 private:
-	const char* vertexShaderFile = "resource/shaders/simple.vert";
-	const char* fragmentShaderFile = "resource/shaders/simple.frag";
-	GLuint vao, shaderProgram;
+	GLuint m_VAO;
+	GLuint m_shader;
 public:
-	Plane(float);
-	Plane(float, float);
+	Plane(float size);
+	Plane(float width, float height);
 	~Plane();
-	void Draw(mat4 view, mat4 projection);
+	void draw(const glm::mat4 view, const glm::mat4 proj);
+private:
+	void load(float width, float height);
 };
 

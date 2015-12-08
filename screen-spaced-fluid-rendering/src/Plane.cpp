@@ -7,7 +7,16 @@ Plane::Plane(float size)
 
 Plane::Plane(float width, float height)
 {
-	// Vertex positions
+	load(width, height);
+}
+
+
+Plane::~Plane()
+{
+}
+
+void Plane::load(float width, float height)
+{
 	const float positions [] = {
 		// X	Y	Z
 		width, 0, height,
@@ -28,22 +37,19 @@ Plane::Plane(float width, float height)
 		2, 1, 3,
 	};
 
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
+
 	GLuint buffer;
-
-	// Create the vertex array object
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	// Create the buffer objects
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, false/*normalized*/, 0/*stride*/, 0/*offset*/);
-	
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, false/*normalized*/, 0/*stride*/, 0/*offset*/);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
@@ -51,13 +57,12 @@ Plane::Plane(float width, float height)
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
-	GLuint vertexShader, fragmentShader;
+	
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	const char * vv = textFileRead(vertexShaderFile);
-	const char * ff = textFileRead(fragmentShaderFile);
+	const char * vv = textFileRead("resource/shaders/simple.vert");
+	const char * ff = textFileRead("resource/shaders/simple.frag");
 
 	glShaderSource(vertexShader, 1, &vv, NULL);
 	glShaderSource(fragmentShader, 1, &ff, NULL);
@@ -94,40 +99,34 @@ Plane::Plane(float width, float height)
 		throw;
 	}
 
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
+	m_shader = glCreateProgram();
+	glAttachShader(m_shader, vertexShader);
+	glAttachShader(m_shader, fragmentShader);
 
-	glBindFragDataLocation(shaderProgram, 0, "fragmentColor");
+	glBindFragDataLocation(m_shader, 0, "fragmentColor");
 
-	glBindAttribLocation(shaderProgram, 0, "position");
-	glBindAttribLocation(shaderProgram, 1, "texCoord");
+	glBindAttribLocation(m_shader, 0, "position");
+	glBindAttribLocation(m_shader, 1, "texCoord");
 
-	glLinkProgram(shaderProgram);
-	glValidateProgram(shaderProgram);
+	glLinkProgram(m_shader);
+	glValidateProgram(m_shader);
+
 }
 
-
-Plane::~Plane()
+void Plane::draw(const glm::mat4 view, const glm::mat4 proj)
 {
-}
-
-void Plane::Draw(mat4 view, mat4 projection)
-{
-	glUseProgram(shaderProgram);
+	glUseProgram(m_shader);
 
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 
 	// Send the VP to the vertex shader
-	glUniformMatrix4fv(glGetUniformLocation(shaderProgram, 
-		"view"), 
+	glUniformMatrix4fv(glGetUniformLocation(m_shader, "view"), 
 		1, GL_FALSE, glm::value_ptr(view));
-	glUniformMatrix4fv(glGetUniformLocation(shaderProgram,
-		"projection"),
-		1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(glGetUniformLocation(m_shader, "projection"),
+		1, GL_FALSE, glm::value_ptr(proj));
 
-	glBindVertexArray(vao);
+	glBindVertexArray(m_VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	glUseProgram(0);

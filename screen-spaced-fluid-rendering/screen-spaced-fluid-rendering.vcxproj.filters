@@ -24,9 +24,6 @@
     <ClCompile Include="src\FirstPersonCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\FrameBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,15 +45,15 @@
     <ClCompile Include="src\FluidParticleSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\OrbitCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Box.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\FirstPersonCamera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\FrameBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Model.h">
@@ -75,6 +72,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\FluidParticleSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\OrbitCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

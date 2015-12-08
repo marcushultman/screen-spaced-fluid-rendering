@@ -2,6 +2,7 @@
 
 SkyBox::SkyBox()
 {
+	load();
 }
 
 
@@ -10,38 +11,34 @@ SkyBox::~SkyBox()
 }
 
 
-void SkyBox::Load()
+void SkyBox::load()
 {
-	box = new Box(200);
-
-	GLuint vS, fS;
-
-	vS = glCreateShader(GL_VERTEX_SHADER);
-	fS = glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER); 
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
 	const char * vv = textFileRead("resource/shaders/skybox.vert");
 	const char * ff = textFileRead("resource/shaders/skybox.frag");
 
-	glShaderSource(vS, 1, &vv, NULL);
-	glShaderSource(fS, 1, &ff, NULL);
+	glShaderSource(vertexShader, 1, &vv, NULL);
+	glShaderSource(fragmentShader, 1, &ff, NULL);
 
-	glCompileShader(vS);
-	glCompileShader(fS);
+	glCompileShader(vertexShader);
+	glCompileShader(fragmentShader);
 	
-	shader = glCreateProgram();
-	glAttachShader(shader, vS);
-	glAttachShader(shader, fS);
+	m_shader = glCreateProgram();
+	glAttachShader(m_shader, vertexShader);
+	glAttachShader(m_shader, fragmentShader);
 
-	glBindFragDataLocation(shader, 0, "fragmentColor");
+	glBindFragDataLocation(m_shader, 0, "fragmentColor");
 
-	glBindAttribLocation(shader, 0, "position");
-	glBindAttribLocation(shader, 1, "texCoord");
+	glBindAttribLocation(m_shader, 0, "position");
+	glBindAttribLocation(m_shader, 1, "texCoord");
 
-	glLinkProgram(shader);
-	glValidateProgram(shader);
+	glLinkProgram(m_shader);
+	glValidateProgram(m_shader);
 
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+	glGenTextures(1, &m_texture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texture);
 
 	GLenum face [] = {
 		GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 
@@ -87,33 +84,30 @@ void SkyBox::Load()
 
 }
 
-void SkyBox::Draw(mat4 view, mat4 projection)
+void SkyBox::draw(const glm::mat4 view, const glm::mat4 proj)
 {
-	glUseProgram(shader);
+	glUseProgram(m_shader);
 
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 
-	glProgramUniformMatrix4fv(shader,
-		glGetUniformLocation(shader, "view"),
+	glUniformMatrix4fv(glGetUniformLocation(m_shader, "view"),
 		1, GL_FALSE, glm::value_ptr(view));
 
-	glProgramUniformMatrix4fv(shader,
-		glGetUniformLocation(shader, "projection"),
-		1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(glGetUniformLocation(m_shader, "projection"),
+		1, GL_FALSE, glm::value_ptr(proj));
 
 	// Extract camera position
-	vec3 cameraPosition = vec3(glm::inverse(view)[3]);
+	glm::vec3 cameraPosition = glm::vec3(glm::inverse(view)[3]);
 
-	glProgramUniform3fv(shader,
-		glGetUniformLocation(shader, "cameraPosition"),
+	glUniform3fv(glGetUniformLocation(m_shader, "cameraPosition"),
 		1, glm::value_ptr(cameraPosition));
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-	glUniform1i(glGetUniformLocation(shader, "s_texture"), 0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texture);
+	glUniform1i(glGetUniformLocation(m_shader, "s_texture"), 0);
 	
-	box->Draw();
+	m_box.draw();
 
 	glUseProgram(0);
 }

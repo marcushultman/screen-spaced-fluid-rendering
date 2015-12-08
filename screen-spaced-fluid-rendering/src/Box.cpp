@@ -1,10 +1,11 @@
 #include "Box.h"
 
+Box::Box() : Box(1)
+{
+}
+
 Box::Box(float size)
 {
-	Box::size = size;
-
-	// Vertex positions
 	const float positions [] = {
 		// X	Y	Z
 		-size, size, size,
@@ -33,17 +34,14 @@ Box::Box(float size)
 		5, 3, 1,
 	};
 
+	glGenVertexArrays(1, &m_VAO);
+	glBindVertexArray(m_VAO);
+
 	GLuint buffer;
-
-	// Create the vertex array object
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	// Create the buffer objects
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, false/*normalized*/, 0/*stride*/, 0/*offset*/);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
@@ -56,8 +54,8 @@ Box::~Box()
 {
 }
 
-void Box::Draw()
+void Box::draw()
 {
-	glBindVertexArray(vao);
+	glBindVertexArray(m_VAO);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 }

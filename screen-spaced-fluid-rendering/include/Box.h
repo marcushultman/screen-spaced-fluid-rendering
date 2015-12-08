@@ -1,19 +1,15 @@
 #pragma once
 
-//Include GLEW
 #include <GL/glew.h>
-
-//Include GLM
-#include <glm\glm.hpp>
 
 class Box
 {
 private:
-	GLuint vao;
-	float size;
+	GLuint m_VAO;
 public:
-	Box(float);
+	Box();
+	Box(float size);
 	~Box();
-	void Draw();
+	void draw();
 };
 

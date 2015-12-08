@@ -1,6 +1,4 @@
 
-// #include "Camera.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -14,16 +12,16 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <glm\glm.hpp>
-#include <glm\gtc\matrix_transform.hpp>
-#include <glm\gtc\type_ptr.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#include <assimp\cimport.h>
-#include <assimp\scene.h>
-#include <assimp\postprocess.h>
-#include <assimp\vector3.h>
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/vector3.h>
 
-#include <IL\il.h>
+#include <IL/il.h>
 
 #include "textfile.h"
 
@@ -32,6 +30,9 @@
 #include "SkyBox.h"
 #include "Plane.h"
 #include "FluidParticleSystem.h"
+
+#include "OrbitCamera.h"
+#include "FirstPersonCamera.h"
 
 #pragma region Field
 
@@ -42,27 +43,24 @@
 #define FAR_PLANE 500.0f
 #define FOV 0.75f
 
+static const vec3 X_AXIS(1, 0, 0);
+static const vec3 Y_AXIS(0, 1, 0);
+static const vec3 Z_AXIS(0, 0, 1);
+
 // TODO: Build camera class
-const vec3 X_AXIS(1, 0, 0);
-const vec3 Y_AXIS(0, 1, 0);
-const vec3 Z_AXIS(0, 0, 1);
-vec3 camPos;
-float camRotationSpeed = 0.005f;
-float camPitch, camYaw;
-float camNormalSpeed = 100.0f, camHighSpeed = 250.0f, 
-	camSpeed = camNormalSpeed;
-vec3 camVelocity;
-mat4 view, projection;
-float nearPlane = NEAR_PLANE; // 0.1f,
-float farPlane = FAR_PLANE;
+//float camRotationSpeed = 0.005f;
+//float camNormalSpeed = 250.0f, camHighSpeed = 500.0f, 
+	//camSpeed = camNormalSpeed;
 
-//static Camera		s_camera;
-static glm::mat4	s_proj;
+static unsigned int			s_cameraIndex = 0;
+static OrbitCamera			s_camera;
+static FirstPersonCamera	s_camera2;
+static glm::mat4			s_proj;
 
-Model* dwarf;
-SkyBox* skybox;
+Model*	s_dwarf;
+SkyBox*	s_skybox;
+Plane*	s_plane;
 glm::vec2 floorSize = glm::vec2(150.0, 150.0);
-Plane* plane;
 
 glm::vec2 previousMousePos;
 
@@ -100,28 +98,31 @@ static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int
 	if (action == GLFW_REPEAT)
 		return;
 
-	if (mods & GLFW_MOD_SHIFT) camSpeed = camHighSpeed;
-	else camSpeed = camNormalSpeed;
+	if (mods & GLFW_MOD_SHIFT){
+		s_camera2.setSpeed(500);
+	}
+	else{
+		s_camera2.setSpeed(250);
+	}
+
+	
+
 
 	// Set velocity
 	switch (key)
 	{
 		// Camera movement
 	case GLFW_KEY_W:
-		camVelocity.z += (action == GLFW_PRESS ? -1.0f : 1.0f);
+	case GLFW_KEY_S:
+		s_camera2.setVelocityZ(key == GLFW_KEY_W ? -action : action);
 		break;
 	case GLFW_KEY_A:
-		camVelocity.x += (action == GLFW_PRESS ? -1.0f : 1.0f);
-		break;
-	case GLFW_KEY_S:
-		camVelocity.z += (action == GLFW_PRESS ? 1.0f : -1.0f);
-		break;
 	case GLFW_KEY_D:
-		camVelocity.x += (action == GLFW_PRESS ? 1.0f : -1.0f);
+		s_camera2.setVelocityX(key == GLFW_KEY_A ? -action : action);
 		break;
 
 		// Arrow
-	case GLFW_KEY_UP:
+	/*case GLFW_KEY_UP:
 		if (action == GLFW_PRESS)
 			camPitch -= .6f;
 		break;
@@ -136,16 +137,19 @@ static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int
 	case GLFW_KEY_RIGHT:
 		if (action == GLFW_PRESS)
 			camYaw += .6f;
-		break;
+		break;*/
 
 		// RESET CAMERA
-	case GLFW_KEY_R: 
+	/*case GLFW_KEY_R: 
 		camPitch = camYaw = 0;
 		camPos = camVelocity = vec3(0);
-		break;
+		break;*/
 
-		// RESET CAMERA
 	case GLFW_KEY_P:
+		// Toggle camera
+		if (action == GLFW_PRESS)
+			s_cameraIndex = 1 - s_cameraIndex;
+
 		if (action == GLFW_PRESS)
 			renderDepth = true;
 		else if (action == GLFW_RELEASE)
@@ -159,13 +163,37 @@ static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int
 
 static void onMouseMove(GLFWwindow* window, double xpos, double ypos)
 {
-	camYaw += camRotationSpeed * ((float) xpos - previousMousePos.x);
-	camPitch += camRotationSpeed * ((float) ypos - previousMousePos.y);
+	glm::vec2 dpos = glm::vec2(xpos - previousMousePos.x,
+		previousMousePos.y - ypos);
+
+	// Camera control
+	if (s_cameraIndex == 0){
+		if (s_camera.getMode() == OrbitCamera::Mode::ARC){
+			s_camera.rotate(dpos);
+		}
+		else if (s_camera.getMode() == OrbitCamera::Mode::PAN){
+			s_camera.pan(dpos);
+		}
+	}
+	else{
+		s_camera2.rotate(dpos);
+	}
 
 	previousMousePos = glm::vec2(xpos, ypos);
 }
 static void onMouseDown(GLFWwindow* window, int button, int action, int mods)
 {
+	// Rotation mode
+	if (button == GLFW_MOUSE_BUTTON_1){
+		if (action == GLFW_PRESS){
+			s_camera.setMode(glfwGetKey(window, GLFW_KEY_LEFT_ALT) ==
+				GLFW_PRESS ? OrbitCamera::Mode::ARC : OrbitCamera::Mode::PAN);
+		}
+		else if (action == GLFW_RELEASE){
+			s_camera.setMode(OrbitCamera::Mode::NONE);
+		}
+	}
+	// Enable mouse move
 	if (button == GLFW_MOUSE_BUTTON_1)
 	{
 		if (action == GLFW_PRESS){
@@ -174,10 +202,17 @@ static void onMouseDown(GLFWwindow* window, int button, int action, int mods)
 			previousMousePos = glm::vec2(x, y);
 			glfwSetCursorPosCallback(window, onMouseMove);
 		}
-		else
+		else{
 			glfwSetCursorPosCallback(window, NULL);
+		}
+	}	
+}
+
+static void onMouseScroll(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if (s_cameraIndex == 0){
+		s_camera.zoom((float) yoffset);
 	}
-		
 }
 
 #pragma endregion
@@ -190,6 +225,8 @@ static void setupCallback(GLFWwindow* window)
 
 	// Mouse button (which in turn activates mouse movement)
 	glfwSetMouseButtonCallback(window, onMouseDown);
+
+	glfwSetScrollCallback(window, onMouseScroll);
 }
 
 //static void setupDefaultFBO(int width, int height){
@@ -285,32 +322,28 @@ static void setupCallback(GLFWwindow* window)
 
 static void initialize(GLFWwindow* window)
 {
-	//camPos = vec3(0, 50, 200);
-	camPos = vec3(80, 23, 82);
-
 	int width, height;
 	glfwGetWindowSize(window, &width, &height);
 
 	// Set up projection matrix
-	projection = glm::perspective(FOV, float(width) / float(height),
+	s_proj = glm::perspective(FOV, float(width) / float(height),
 		NEAR_PLANE, FAR_PLANE);
 
 	//setupDefaultFBO(width, height);
 	//setupParticleDataFBO(width, height);
 
-	//Skybox
-	skybox = new SkyBox();
-	skybox->Load();
 
-	plane = new Plane(floorSize.x, floorSize.y);
+	s_skybox = new SkyBox();
+	s_plane = new Plane(floorSize.x, floorSize.y);
 
 	//Model::Load("resource/models/X/Testwuson.X");
 	//Model::Load("resource/models/X/dwarf.x");
-	dwarf = Model::Load("resource/models/X/dwarf.x");
+	s_dwarf = Model::Load("resource/models/X/dwarf.x");
+
 
 	// Create fluid particle system
 	s_particleSystem = new FluidParticleSystem(particleSize,
-		width, height, nearPlane, farPlane);
+		width, height, NEAR_PLANE, FAR_PLANE);
 	int num = 8;
 	std::vector<glm::vec3> positions;
 	for (int x = -num; x < num; x++){
@@ -327,15 +360,20 @@ static void initialize(GLFWwindow* window)
 static void update(double elapsedTime, GLFWwindow* window){
 
 	// Update camera position
-	camPos += camSpeed * (float) elapsedTime * camVelocity *
+	/*camPos += camSpeed * (float) elapsedTime * camVelocity *
 		glm::angleAxis(camPitch, X_AXIS) *
-		glm::angleAxis(camYaw, Y_AXIS);
+		glm::angleAxis(camYaw, Y_AXIS);*/
+
+	if (s_cameraIndex == 1){
+		s_camera2.update((float) elapsedTime);
+	}
 
 	// TODO: Perform particle movement 
 
+	//s_particleSystem->update();
 }
 
-static void drawFullScreenQuad()
+static void drawQuad()
 {
 	static GLuint vertexArrayObject = 0;
 
@@ -373,19 +411,29 @@ static void draw(double elapsed_time, GLFWwindow* window)
 
 	// TODO: Create camera class, obtain view from camera
 	// Update view matrix
-	vec3 center = camPos - Z_AXIS * 
+	/*vec3 center = camPos - Z_AXIS * 
 		glm::angleAxis(camPitch, X_AXIS) * 
 		glm::angleAxis(camYaw, Y_AXIS);
-	view = glm::lookAt(camPos, center, Y_AXIS);
+	view = glm::lookAt(camPos, center, Y_AXIS);*/
+
+	glm::vec3 cameraPosition = s_camera.getPosition();
+	glm::mat4 view;
+
+	if (s_cameraIndex == 0){
+		view = s_camera.getView();
+	}
+	else{
+		view = s_camera2.getView();
+	}
 
 	// Draw backgound scene
-	skybox->Draw(view, projection);
-	plane->Draw(view, projection);
-	dwarf->Draw(view, projection);
+	s_skybox->draw(view, s_proj);
+	s_plane->draw(view, s_proj);
+	s_dwarf->Draw(view, s_proj);
 
 	// Draw fluid
 	if (!glfwGetKey(window, GLFW_KEY_Z))
-		s_particleSystem->draw(0, view, projection);
+		s_particleSystem->draw(0, view, s_proj);
 
 
 	glUseProgram(0);
@@ -393,7 +441,11 @@ static void draw(double elapsed_time, GLFWwindow* window)
 
 static void unload(GLFWwindow* window)
 {
+	delete s_skybox;
+	delete s_plane;
+	delete s_dwarf;
 
+	delete s_particleSystem;
 }
 
 #pragma region Main Loop
@@ -437,7 +489,7 @@ void mainLoop(GLFWwindow* window)
 			glBindTexture(GL_TEXTURE_2D, particleDataDepth);
 			glProgramUniform1i(postProcessShaderProgram,
 				glGetUniformLocation(postProcessShaderProgram, "frameBufferTexture"), 0);
-			drawFullScreenQuad();
+			drawQuad();
 			glUseProgram(0);
 		}
 		*/
@@ -542,9 +594,7 @@ int main(int argc, char *argv [])
 	//Main Loop
 	mainLoop(window);
 
-	//delete dwarf;
-	//delete plane;
-	//delete skybox;
+	unload(window);
 
 	// We added a log stream to the library, it's our job to disable it
 	// again. This will definitely release the last resources allocated

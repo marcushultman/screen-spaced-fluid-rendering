@@ -2,28 +2,28 @@
 
 #include <string>
 
-#include <GL\glew.h>
-#include <IL\il.h>
+#include <GL/glew.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <IL/il.h>
 
 #include "textfile.h"
 
 #include "Box.h"
 
-#include <glm\gtc\type_ptr.hpp>
-
-using glm::mat4;
-using glm::vec3;
-
 class SkyBox
 {
 private:
-	Box* box;
-	GLuint texture;
-	GLuint shader;
+	Box m_box;
+	GLuint m_texture;
+	GLuint m_shader;
 public:
 	SkyBox();
 	~SkyBox();
-	void Load();
-	void Draw(mat4 view, mat4 projection);
+	void draw(const glm::mat4 view, const glm::mat4 proj);
+private:
+	void load();
 };
 
