@@ -31,7 +31,7 @@
 #include "Box.h"
 #include "SkyBox.h"
 #include "Plane.h"
-#include "FluidParticle.h"
+#include "FluidParticleSystem.h"
 
 #pragma region Field
 
@@ -68,7 +68,7 @@ glm::vec2 previousMousePos;
 
 
 // Particle system
-static FluidParticle* s_particleSystem;
+static FluidParticleSystem* s_particleSystem;
 float particleSize = 5.0f;
 float particleSep = 8.0f;
 
@@ -308,7 +308,9 @@ static void initialize(GLFWwindow* window)
 	//Model::Load("resource/models/X/dwarf.x");
 	dwarf = Model::Load("resource/models/X/dwarf.x");
 
-	s_particleSystem = new FluidParticle(particleSize, width, height);
+	// Create fluid particle system
+	s_particleSystem = new FluidParticleSystem(particleSize,
+		width, height, nearPlane, farPlane);
 	int num = 8;
 	std::vector<glm::vec3> positions;
 	for (int x = -num; x < num; x++){
@@ -318,13 +320,8 @@ static void initialize(GLFWwindow* window)
 			}
 		}
 	}		
-	s_particleSystem->SetPositions(positions);
+	s_particleSystem->setPositions(positions);
 	printf("Number of particles: %d\n", positions.size());
-
-	// Set up render-to-texture
-	s_particleSystem->setupFBO();
-	s_particleSystem->setupBlurFBO();
-
 }
 
 static void update(double elapsedTime, GLFWwindow* window){
@@ -386,27 +383,11 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	plane->Draw(view, projection);
 	dwarf->Draw(view, projection);
 
-	/////////////////////////////
-	// DATA PASS
-	/////////////////////////////
-
-	s_particleSystem->DrawData(view, projection);
+	// Draw fluid
+	if (!glfwGetKey(window, GLFW_KEY_Z))
+		s_particleSystem->draw(0, view, projection);
 
 
-	/////////////////////////////
-	// BLUR PASS
-	/////////////////////////////
-
-	// -- CODE GOES HERE --
-
-	s_particleSystem->blur();
-
-	/////////////////////////////
-	// RENDER PASS
-	/////////////////////////////
-
-	s_particleSystem->Draw(view, projection,
-		glfwGetKey(window, GLFW_KEY_Z));
 	glUseProgram(0);
 }
 

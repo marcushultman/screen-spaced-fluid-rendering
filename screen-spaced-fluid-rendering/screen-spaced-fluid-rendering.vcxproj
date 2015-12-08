@@ -87,7 +87,7 @@
   <ItemGroup>
     <ClCompile Include="src\Box.cpp" />
     <ClCompile Include="src\FirstPersonCamera.cpp" />
-    <ClCompile Include="src\FluidParticle.cpp" />
+    <ClCompile Include="src\FluidParticleSystem.cpp" />
     <ClCompile Include="src\FrameBuffer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Model.cpp" />
@@ -99,7 +99,7 @@
   <ItemGroup>
     <ClInclude Include="include\Box.h" />
     <ClInclude Include="include\FirstPersonCamera.h" />
-    <ClInclude Include="include\FluidParticle.h" />
+    <ClInclude Include="include\FluidParticleSystem.h" />
     <ClInclude Include="include\FrameBuffer.h" />
     <ClInclude Include="include\Model.h" />
     <ClInclude Include="include\Plane.h" />

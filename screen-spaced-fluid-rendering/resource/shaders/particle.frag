@@ -7,13 +7,9 @@ uniform float znear;
 uniform float zfar;
 uniform float sphereRadius;
 
-uniform sampler2D depthTex;
-
-uniform int renderDepth;
+uniform sampler2D depthTexture;
 
 uniform samplerCube reflectionTexture;
-
-//uniform sampler2D thicknessTex;
 
 in vec2 texCoord;
 in vec3 eyeSpacePos;
@@ -33,29 +29,26 @@ vec4 uvToEye(vec2 uv, float depth)
 
 vec4 getEyePos(vec2 uv)
 {
-	return uvToEye(uv, texture(depthTex, uv).x);
+	return uvToEye(uv, texture(depthTexture, uv).x);
 }
 
 void main()
 {
 	// ------- Retrive depth -------
 	
-	vec2 screenSize = textureSize(depthTex, 0);
+	vec2 screenSize = textureSize(depthTexture, 0);
 	vec2 texelUnit = 1.0 / (screenSize);
 	vec2 screenCoord = gl_FragCoord.xy * texelUnit;
-	float depth = texture(depthTex, screenCoord).x;
+	float depth = texture(depthTexture, screenCoord).x;
 	
 	// Kill pixels outside circle
 	vec2 uv = texCoord * 2.0 - 1.0;
 	if (dot(uv, uv) > 1) discard;
 
-	// Linearize and render
-	if (renderDepth == 1){
-		// Linearized depth
-		depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
-		fragColor = vec4(vec3(depth), 1);
-		return;
-	}
+	// DEBUG: Linearize depth
+	//depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
+	//fragColor = vec4(vec3(depth), 1);
+	//return;
 
 	// ------- Reconstruct normal -------
 	
@@ -82,7 +75,7 @@ void main()
 	mat4 invView = inverse(view);
 	vec3 N = vec3(invView * vec4(normalize(cross(ddx.xyz, ddy.xyz)), 0));
 	
-	// Debug: render normal
+	// DEBUG: Render normal
 	//N = (N + vec3(1)) / 2.0;
 	//fragColor = vec4(N, 1);
 	//return;

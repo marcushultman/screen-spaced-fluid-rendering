@@ -12,6 +12,7 @@ in vec3 eyeSpacePos;
 in vec4 color;
 
 layout (location=0) out vec4 fragColor;
+layout (location=1) out vec4 thickness;
 
 void main() 
 {
@@ -21,24 +22,18 @@ void main()
 	if (r2 > 1) discard; // kill pixels outside circle
 	N.z = sqrt(1.0 - r2);
 
-	// Calculate depth
+	// Depth
 	vec4 viewPos = vec4(eyeSpacePos + N * sphereRadius, 1.0);
 	vec4 clipSpacePos = projection * viewPos;
 	gl_FragDepth = clipSpacePos.z / clipSpacePos.w;
 
-	// Linearized depth in color buffer
+	// Thickness
+	//thickness = vec4(vec3(1), 1);
+	thickness = vec4(.1 * vec3(1 - r2), 0);
+
+	// ------- Debug -------
+
+	// Linearized depth
 	float z = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
 	fragColor = vec4(vec3(z), 1);
-	return;
-	
-	// Light direction in world space
-	vec4 lightDir = inverse(view) * vec4(-.2, 1, -1, 0);
-
-	// Water depth
-	float waterDepth = .8 + .05 * (inverse(view) * viewPos).y;
-
-	float ambient = .2;
-	float diff = ambient + (1 - ambient) * max(0.0, dot(N, lightDir.xyz));
-	vec3 color = waterDepth * vec3(.2, .4, .8);
-	fragColor = vec4(diff * color, 1.0);
 }
