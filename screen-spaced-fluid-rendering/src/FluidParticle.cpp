@@ -268,6 +268,54 @@ void FluidParticle::setupShaders(float size)
 	glUniform1f(glGetUniformLocation(m_particleProgram, "znear"), nearPlane);
 	glUniform1f(glGetUniformLocation(m_particleProgram, "zfar"), farPlane);
 
+	// Load reflection map
+
+	glGenTextures(1, &m_reflectionTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_reflectionTexture);
+
+	GLenum face [] = {
+		GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+		GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+
+		GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+	};
+	std::wstring imageFilename [] = {
+		L"resource/envmap_miramar/miramar_bk.tga",
+		L"resource/envmap_miramar/miramar_ft.tga",
+
+		L"resource/envmap_miramar/miramar_dn.tga",
+		L"resource/envmap_miramar/miramar_up.tga",
+
+		L"resource/envmap_miramar/miramar_lf.tga",
+		L"resource/envmap_miramar/miramar_rt.tga",
+	};
+
+	ILuint imageIds[6];
+	ilGenImages(6, imageIds);
+
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		ilBindImage(imageIds[i]);
+
+		ilLoadImage(imageFilename[i].c_str());
+		ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
+
+		glTexImage2D(face[i], 0, GL_RGBA,
+			ilGetInteger(IL_IMAGE_WIDTH),
+			ilGetInteger(IL_IMAGE_HEIGHT),
+			0, GL_RGBA, GL_UNSIGNED_BYTE,
+			ilGetData());
+	}
+	ilDeleteImages(6, imageIds);
+	// Set the filtering mode
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
 	glUseProgram(0);
 }
 
@@ -293,6 +341,10 @@ void FluidParticle::Draw(mat4 view, mat4 projection, int renderDepth)
 	glUniform1i(glGetUniformLocation(m_particleProgram, "depthTex"), 0);
 
 	glUniform1i(glGetUniformLocation(m_particleProgram, "renderDepth"), renderDepth);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_reflectionTexture);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "reflectionTexture"), 1);
 
 	DrawShader(m_particleProgram, view, projection);
 

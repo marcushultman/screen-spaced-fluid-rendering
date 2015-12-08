@@ -15,6 +15,8 @@
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\gtc\matrix_access.hpp>
 
+#include <IL\il.h>
+
 #include "textfile.h"
 
 using glm::mat4;
@@ -42,6 +44,8 @@ private:
 
 	GLuint m_dataTexture, m_colorTexture; // Geomery pass
 	GLuint m_blurTexture; // Blur pass
+
+	GLuint m_reflectionTexture;
 
 	GLuint
 		m_particleProgram,
