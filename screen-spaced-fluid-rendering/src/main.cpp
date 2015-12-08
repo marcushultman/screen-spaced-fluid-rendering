@@ -47,15 +47,12 @@ static const vec3 X_AXIS(1, 0, 0);
 static const vec3 Y_AXIS(0, 1, 0);
 static const vec3 Z_AXIS(0, 0, 1);
 
-// TODO: Build camera class
-//float camRotationSpeed = 0.005f;
-//float camNormalSpeed = 250.0f, camHighSpeed = 500.0f, 
-	//camSpeed = camNormalSpeed;
 
 static unsigned int			s_cameraIndex = 0;
-static OrbitCamera			s_camera;
+static OrbitCamera			s_camera = OrbitCamera(glm::vec3(0, 3, 0), glm::vec2(0, .5f));
 static FirstPersonCamera	s_camera2;
 static glm::mat4			s_proj;
+
 
 Model*	s_dwarf;
 SkyBox*	s_skybox;
@@ -70,14 +67,10 @@ static FluidParticleSystem* s_particleSystem;
 float particleSize = 5.0f;
 float particleSep = 8.0f;
 
-bool renderDepth = 0;
-
-
-//// Post processing NOT CURRENTLY USED
-//GLuint mainBuffer, mainBufferTexture
-//GLuint frameBufferObject, 
-//	frameBufferTexture, 
-//	postProcessShaderProgram;
+// Post processing
+static GLuint mainBuffer;
+static GLuint mainBufferTexture, mainBufferDepth;
+static GLuint postProcessShader;
 
 #pragma endregion
 
@@ -104,8 +97,6 @@ static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int
 	else{
 		s_camera2.setSpeed(250);
 	}
-
-	
 
 
 	// Set velocity
@@ -149,11 +140,6 @@ static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int
 		// Toggle camera
 		if (action == GLFW_PRESS)
 			s_cameraIndex = 1 - s_cameraIndex;
-
-		if (action == GLFW_PRESS)
-			renderDepth = true;
-		else if (action == GLFW_RELEASE)
-			renderDepth = false;
 		break;
 
 	default:
@@ -229,95 +215,70 @@ static void setupCallback(GLFWwindow* window)
 	glfwSetScrollCallback(window, onMouseScroll);
 }
 
-//static void setupDefaultFBO(int width, int height){
-//	
-//	// Set up renderbuffer
-//	glGenFramebuffers(1, &frameBufferObject);
-//	glBindFramebuffer(GL_FRAMEBUFFER, frameBufferObject);
-//
-//	// Color buffer
-//	glGenTextures(1, &frameBufferTexture);
-//	glBindTexture(GL_TEXTURE_2D, frameBufferTexture);
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//	
-//	// Depth buffer
-//	GLuint depthTexture;
-//	glGenTextures(1, &depthTexture);
-//	glBindTexture(GL_TEXTURE_2D, depthTexture);
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-//
-//	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-//		frameBufferTexture, 0);
-//	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
-//		depthTexture, 0);
-//
-//	// Always check that our framebuffer is ok
-//	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-//		throw;
-//
-//	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//
-//#pragma region Post process shader
-//	{
-//		GLuint vertexShader, fragmentShader;
-//
-//		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-//		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-//
-//		const char * vv = textFileRead("resource/shaders/postprocess.vert");
-//		const char * ff = textFileRead("resource/shaders/postprocess.frag");
-//
-//		glShaderSource(vertexShader, 1, &vv, NULL);
-//		glShaderSource(fragmentShader, 1, &ff, NULL);
-//
-//		int compileOK;
-//
-//		glCompileShader(vertexShader);
-//		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
-//		if (!compileOK) {
-//			GLint infoLogLength;
-//			glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-//
-//			GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-//			glGetShaderInfoLog(vertexShader, infoLogLength, NULL, strInfoLog);
-//
-//			fprintf(stderr, "Compilation error in vertexShader: %s\n", strInfoLog);
-//			delete [] strInfoLog;
-//
-//			throw;
-//		}
-//
-//		glCompileShader(fragmentShader);
-//		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
-//		if (!compileOK) {
-//			GLint infoLogLength;
-//			glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-//
-//			GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-//			glGetShaderInfoLog(fragmentShader, infoLogLength, NULL, strInfoLog);
-//
-//			fprintf(stderr, "Compilation error in fragmentShader: %s\n", strInfoLog);
-//			delete [] strInfoLog;
-//
-//			throw;
-//		}
-//
-//		postProcessShaderProgram = glCreateProgram();
-//		glAttachShader(postProcessShaderProgram, vertexShader);
-//		glAttachShader(postProcessShaderProgram, fragmentShader);
-//
-//		glBindAttribLocation(postProcessShaderProgram, 0, "position");
-//		glBindFragDataLocation(postProcessShaderProgram, 0, "fragmentColor");
-//
-//		glLinkProgram(postProcessShaderProgram);
-//		glValidateProgram(postProcessShaderProgram);
-//	}
-//#pragma endregion
-//}
+static void setupMainFBO(int width, int height){
+
+	// Set up renderbuffer
+	glGenFramebuffers(1, &mainBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, mainBuffer);
+
+	// Color buffer
+	glGenTextures(1, &mainBufferTexture);
+	glBindTexture(GL_TEXTURE_2D, mainBufferTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	// Depth buffer
+	glGenTextures(1, &mainBufferDepth);
+	glBindTexture(GL_TEXTURE_2D, mainBufferDepth);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height,
+		0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glFramebufferTexture(GL_FRAMEBUFFER,
+		GL_COLOR_ATTACHMENT0, mainBufferTexture, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER,
+		GL_DEPTH_ATTACHMENT, mainBufferDepth, 0);
+
+	// Always check that our framebuffer is ok
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		throw;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void setupPostProcessShader()
+{
+	GLuint vertexShader, fragmentShader;
+
+	vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	const char * vv = textFileRead("resource/shaders/quad.vert");
+	const char * ff = textFileRead("resource/shaders/postprocess.frag");
+
+	glShaderSource(vertexShader, 1, &vv, NULL);
+	glShaderSource(fragmentShader, 1, &ff, NULL);
+
+	int compileOK;
+
+	glCompileShader(vertexShader);
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
+	if (!compileOK)
+		throw;
+
+	glCompileShader(fragmentShader);
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
+	if (!compileOK)
+		throw;
+
+	postProcessShader = glCreateProgram();
+	glAttachShader(postProcessShader, vertexShader);
+	glAttachShader(postProcessShader, fragmentShader);
+	glLinkProgram(postProcessShader);
+	glValidateProgram(postProcessShader);
+}
 
 
 static void initialize(GLFWwindow* window)
@@ -329,8 +290,9 @@ static void initialize(GLFWwindow* window)
 	s_proj = glm::perspective(FOV, float(width) / float(height),
 		NEAR_PLANE, FAR_PLANE);
 
-	//setupDefaultFBO(width, height);
-	//setupParticleDataFBO(width, height);
+	// Post process rendering
+	setupMainFBO(width, height);
+	setupPostProcessShader();
 
 
 	s_skybox = new SkyBox();
@@ -360,27 +322,23 @@ static void initialize(GLFWwindow* window)
 static void update(double elapsedTime, GLFWwindow* window){
 
 	// Update camera position
-	/*camPos += camSpeed * (float) elapsedTime * camVelocity *
-		glm::angleAxis(camPitch, X_AXIS) *
-		glm::angleAxis(camYaw, Y_AXIS);*/
-
-	if (s_cameraIndex == 1){
+	if (s_cameraIndex == 0){
+		if (s_camera.getMode() == OrbitCamera::Mode::NONE){
+			s_camera.rotate(100 * elapsedTime, 0);
+		}
+	}
+	else{
 		s_camera2.update((float) elapsedTime);
 	}
 
-	// TODO: Perform particle movement 
-
+	// TODO: Perform particle movement
 	//s_particleSystem->update();
 }
 
 static void drawQuad()
 {
-	static GLuint vertexArrayObject = 0;
-
-	// TODO: Move to initialization
-	// do this initialization first time the function is called... somewhat dodgy, but works for demonstration purposes
-	if (vertexArrayObject == 0)
-	{
+	static GLuint s_quadVAO = 0;
+	if (s_quadVAO == 0) {
 		static const float positions [] = {
 			-1.0f, -1.0f,
 			1.0f, -1.0f,
@@ -388,55 +346,58 @@ static void drawQuad()
 			-1.0f, 1.0f,
 		};
 
-		glGenVertexArrays(1, &vertexArrayObject);
-		glBindVertexArray(vertexArrayObject);
+		glGenVertexArrays(1, &s_quadVAO);
+		glBindVertexArray(s_quadVAO);
 
-		GLuint buffer = 0;
+		GLuint buffer;
 		glGenBuffers(1, &buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, buffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 	}
 
-	glBindVertexArray(vertexArrayObject);
+	glBindVertexArray(s_quadVAO);
 	glDrawArrays(GL_QUADS, 0, 4);
 }
 static void draw(double elapsed_time, GLFWwindow* window)
 {
 	// Clear the main buffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, mainBuffer);
 	glClearColor(0.390625f, 0.582031f, 0.925781f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// TODO: Create camera class, obtain view from camera
-	// Update view matrix
-	/*vec3 center = camPos - Z_AXIS * 
-		glm::angleAxis(camPitch, X_AXIS) * 
-		glm::angleAxis(camYaw, Y_AXIS);
-	view = glm::lookAt(camPos, center, Y_AXIS);*/
-
+	// Get view from camera
 	glm::vec3 cameraPosition = s_camera.getPosition();
-	glm::mat4 view;
-
-	if (s_cameraIndex == 0){
-		view = s_camera.getView();
-	}
-	else{
-		view = s_camera2.getView();
-	}
+	glm::mat4 view = (s_cameraIndex == 0 ? 
+		s_camera.getView() : s_camera2.getView());
 
 	// Draw backgound scene
 	s_skybox->draw(view, s_proj);
 	s_plane->draw(view, s_proj);
 	s_dwarf->Draw(view, s_proj);
 
-	// Draw fluid
-	if (!glfwGetKey(window, GLFW_KEY_Z))
-		s_particleSystem->draw(0, view, s_proj);
+	// Pre-process fluid
+	s_particleSystem->preProcessPass(view, s_proj);
 
 
-	glUseProgram(0);
+	// Render background
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glUseProgram(postProcessShader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mainBufferTexture);
+	glUniform1i(glGetUniformLocation(postProcessShader, "source"), 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, mainBufferDepth);
+	glUniform1i(glGetUniformLocation(postProcessShader, "depth"), 1);
+	glDepthFunc(GL_LEQUAL);
+	drawQuad();
+
+	// Post-process fluid
+	s_particleSystem->postProcessPass(
+		mainBufferTexture, view, s_proj);
 }
 
 static void unload(GLFWwindow* window)
@@ -452,53 +413,18 @@ static void unload(GLFWwindow* window)
 
 void mainLoop(GLFWwindow* window)
 {
-	// the time of the previous frame
 	double old_time = glfwGetTime();
-	// this just loops as long as the program runs
 	while (!glfwWindowShouldClose(window))
 	{
-		// calculate time elapsed, and the amount by which stuff rotates
 		double current_time = glfwGetTime(),
 			elapsed_time = (current_time - old_time);
 		old_time = current_time;
 
-		// Update
 		update(elapsed_time, window);
-
-		// Draw
-
-		//glDisable(GL_BLEND);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		draw(elapsed_time, window);
 
-		/*
-		if (renderDepth)
-		{
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-			glClearColor(0.690625, 0.582031, 0.925781, 1.0);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			glDisable(GL_CULL_FACE);
-			glDisable(GL_DEPTH_TEST);
-			glUseProgram(postProcessShaderProgram);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, particleDataDepth);
-			glProgramUniform1i(postProcessShaderProgram,
-				glGetUniformLocation(postProcessShaderProgram, "frameBufferTexture"), 0);
-			drawQuad();
-			glUseProgram(0);
-		}
-		*/
-
-		//Swap buffers
 		glfwSwapBuffers(window);
-		//Get and organize events, like keyboard and mouse input, window resizing, etc...
-		glfwPollEvents();
-		//glfwWaitEvents();
+		glfwPollEvents(); //glfwWaitEvents();
 	}
 }
 
@@ -514,8 +440,7 @@ int main(int argc, char *argv [])
 	glfwSetErrorCallback(onError);
 
 	//Initialize GLFW
-	if (!glfwInit())
-	{
+	if (!glfwInit()){
 		exit(EXIT_FAILURE);
 	}
 
@@ -528,37 +453,26 @@ int main(int argc, char *argv [])
 	//Declare a window object
 	GLFWwindow* window;
 
-	//Create a window and create its OpenGL context
 	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT,
 		"Screen Space Fluid Rendering",
 		NULL /* glfwGetPrimaryMonitor() */,
 		NULL);
 
-	//If the window couldn't be created
-	if (!window)
-	{
+	if (!window){
 		fprintf(stderr, "Failed to open GLFW window.\n");
 		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
-
-	//This function makes the context of the specified window current on the calling thread. 
 	glfwMakeContextCurrent(window);
 
 	// Output some information
 	puts(glfwGetVersionString());
 	printf("OpenGL version supported %s\n", glGetString(GL_VERSION));
 
-	// --------------------------------------------
-	//			Set callbacks
-	// --------------------------------------------
-
+	
 	setupCallback(window);
 	
-	// --------------------------------------------
-	//			AssImp init
-	// --------------------------------------------
-
+	// AssImp init
 	// get a handle to the predefined STDOUT log stream and attach
 	// it to the logging system. It remains active for all further
 	// calls to aiImportFile(Ex) and aiApplyPostProcessing.
@@ -573,8 +487,7 @@ int main(int argc, char *argv [])
 	GLenum err = glewInit();
 
 	//If GLEW hasn't initialized
-	if (err != GLEW_OK)
-	{
+	if (err != GLEW_OK){
 		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 		return 1;
 	}
@@ -591,7 +504,6 @@ int main(int argc, char *argv [])
 	*/
 	initialize(window);
 
-	//Main Loop
 	mainLoop(window);
 
 	unload(window);

@@ -118,5 +118,8 @@
     <None Include="resource\shaders\quad.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="resource\shaders\postprocess.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

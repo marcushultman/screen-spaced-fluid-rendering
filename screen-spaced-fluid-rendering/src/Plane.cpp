@@ -57,6 +57,7 @@ void Plane::load(float width, float height)
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
+	// Load shader
 	
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -67,50 +68,35 @@ void Plane::load(float width, float height)
 	glShaderSource(vertexShader, 1, &vv, NULL);
 	glShaderSource(fragmentShader, 1, &ff, NULL);
 
-	int compileOK;
-
 	glCompileShader(vertexShader);
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
-	if (!compileOK) {
-		GLint infoLogLength;
-		glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-		GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-		glGetShaderInfoLog(vertexShader, infoLogLength, NULL, strInfoLog);
-
-		fprintf(stderr, "Compilation error in vertexShader: %s\n", strInfoLog);
-		delete [] strInfoLog;
-
-		throw;
-	}
-
 	glCompileShader(fragmentShader);
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
-	if (!compileOK) {
-		GLint infoLogLength;
-		glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-		GLchar* strInfoLog = new GLchar[infoLogLength + 1];
-		glGetShaderInfoLog(fragmentShader, infoLogLength, NULL, strInfoLog);
-
-		fprintf(stderr, "Compilation error in fragmentShader: %s\n", strInfoLog);
-		delete [] strInfoLog;
-
-		throw;
-	}
 
 	m_shader = glCreateProgram();
 	glAttachShader(m_shader, vertexShader);
 	glAttachShader(m_shader, fragmentShader);
-
-	glBindFragDataLocation(m_shader, 0, "fragmentColor");
-
-	glBindAttribLocation(m_shader, 0, "position");
-	glBindAttribLocation(m_shader, 1, "texCoord");
-
 	glLinkProgram(m_shader);
 	glValidateProgram(m_shader);
 
+	// Load texture
+
+	glGenTextures(1, &m_texture);
+	glBindTexture(GL_TEXTURE_2D, m_texture);
+
+	ILuint image = ilGenImage();
+	ilBindImage(image);
+
+	ilLoadImage(L"resource/ground.jpg");
+	ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+		ilGetInteger(IL_IMAGE_WIDTH),
+		ilGetInteger(IL_IMAGE_HEIGHT),
+		0, GL_RGB, GL_UNSIGNED_BYTE,
+		ilGetData());
+	ilDeleteImage(image);
+
+	// Set the filtering mode
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 void Plane::draw(const glm::mat4 view, const glm::mat4 proj)
@@ -125,6 +111,10 @@ void Plane::draw(const glm::mat4 view, const glm::mat4 proj)
 		1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(m_shader, "projection"),
 		1, GL_FALSE, glm::value_ptr(proj));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_texture);
+	glUniform1i(glGetUniformLocation(m_shader, "uTexture"), 0);
 
 	glBindVertexArray(m_VAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

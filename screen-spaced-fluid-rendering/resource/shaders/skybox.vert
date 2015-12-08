@@ -5,12 +5,11 @@ uniform mat4 projection;
 
 uniform vec3 cameraPosition;
 
-in vec3	position;
-
-out vec3 TexCoord;
+in vec3	aPosition;
+out vec3 texCoord;
 
 void main() 
 {
-	TexCoord = vec3(position.x, -position.yz);
-	gl_Position = projection * view * vec4(cameraPosition + position, 1);
+	texCoord = vec3(aPosition.x, -aPosition.yz);
+	gl_Position = projection * view * vec4(cameraPosition + aPosition, 1);
 }

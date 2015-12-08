@@ -28,14 +28,10 @@ void SkyBox::load()
 	m_shader = glCreateProgram();
 	glAttachShader(m_shader, vertexShader);
 	glAttachShader(m_shader, fragmentShader);
-
-	glBindFragDataLocation(m_shader, 0, "fragmentColor");
-
-	glBindAttribLocation(m_shader, 0, "position");
-	glBindAttribLocation(m_shader, 1, "texCoord");
-
 	glLinkProgram(m_shader);
 	glValidateProgram(m_shader);
+
+	// Load texture cube
 
 	glGenTextures(1, &m_texture);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texture);
@@ -63,9 +59,7 @@ void SkyBox::load()
 
 	ILuint imageIds[6];
 	ilGenImages(6, imageIds);
-
-	for (unsigned int i = 0; i < 6; i++)
-	{
+	for (unsigned int i = 0; i < 6; i++){
 		ilBindImage(imageIds[i]);
 
 		ilLoadImage(imageFilename[i].c_str());
@@ -78,10 +72,10 @@ void SkyBox::load()
 			ilGetData());
 	}
 	ilDeleteImages(6, imageIds);
+
 	// Set the filtering mode
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 }
 
 void SkyBox::draw(const glm::mat4 view, const glm::mat4 proj)
@@ -105,7 +99,7 @@ void SkyBox::draw(const glm::mat4 view, const glm::mat4 proj)
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texture);
-	glUniform1i(glGetUniformLocation(m_shader, "s_texture"), 0);
+	glUniform1i(glGetUniformLocation(m_shader, "uTexture"), 0);
 	
 	m_box.draw();
 

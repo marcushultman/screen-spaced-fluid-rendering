@@ -109,10 +109,6 @@ void FluidParticleSystem::setupDataFBO(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	//glEnablei(GL_BLEND, 1);
-	//glDisablei(GL_DEPTH_TEST, 1);
-	//glDisablei(GL_CULL_FACE, 1);
-	//glBlendFunci(1, GL_SRC_ALPHA, GL_ONE);
 	
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_colorTexture, 0);
@@ -320,13 +316,40 @@ void FluidParticleSystem::update()
 }
 
 
-void FluidParticleSystem::draw(GLuint targetFBO, const glm::mat4 view, const glm::mat4 proj)
+void FluidParticleSystem::preProcessPass(const glm::mat4 view, const glm::mat4 proj)
 {
 	dataPass(view, proj);
 	blurPass();
+}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, targetFBO);
+void FluidParticleSystem::postProcessPass(GLuint backgroundTexture,
+	const glm::mat4 view, const glm::mat4 proj)
+{
+	glUseProgram(m_particleProgram);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, backgroundTexture);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "backgroundTexture"), 0);
+
+
 	renderPass(view, proj);
+
+	return;
+
+#if defined(_DEBUG)
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_dataFBO);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // NOTE: Screen
+
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
+		0, 0, m_screenWidth / 4, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+	glReadBuffer(GL_COLOR_ATTACHMENT1);
+	glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
+		m_screenWidth / 4, 0, m_screenWidth / 2, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+#endif
 }
 
 
@@ -410,30 +433,19 @@ void FluidParticleSystem::renderPass(const glm::mat4 view, const glm::mat4 proj)
 {
 	glUseProgram(m_particleProgram);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
-	glUniform1i(glGetUniformLocation(m_particleProgram, "depthTexture"), 0);
-
 	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "depthTexture"), 1);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, m_thicknessTexture);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "thicknessTexture"), 2);
+
+	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, m_reflectionTexture);
-	glUniform1i(glGetUniformLocation(m_particleProgram, "reflectionTexture"), 1);
+	glUniform1i(glGetUniformLocation(m_particleProgram, "reflectionTexture"), 3);
 
 	drawParticles(m_particleProgram, view, proj);
-
-#if defined(_DEBUG)
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_dataFBO);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // NOTE: Screen
-
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
-		0, 0, m_screenWidth / 4, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT1);
-	glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
-		m_screenWidth / 4, 0, m_screenWidth / 2, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-#endif
 }
 
 
@@ -474,7 +486,7 @@ void FluidParticleSystem::drawQuad()
 		glGenBuffers(1, &buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, buffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
 	}
 

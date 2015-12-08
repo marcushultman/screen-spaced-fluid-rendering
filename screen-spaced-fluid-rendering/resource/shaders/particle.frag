@@ -7,8 +7,9 @@ uniform float znear;
 uniform float zfar;
 uniform float sphereRadius;
 
+uniform sampler2D backgroundTexture;
 uniform sampler2D depthTexture;
-
+uniform sampler2D thicknessTexture;
 uniform samplerCube reflectionTexture;
 
 in vec2 texCoord;
@@ -45,9 +46,17 @@ void main()
 	vec2 uv = texCoord * 2.0 - 1.0;
 	if (dot(uv, uv) > 1) discard;
 
-	// DEBUG: Linearize depth
+	// DEBUG: Linearized depth
 	//depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
 	//fragColor = vec4(vec3(depth), 1);
+	//return;
+	
+	// DEBUG: Thickness
+	//fragColor = texture(thicknessTexture, screenCoord);
+	//return;
+
+	// DEBUG: Background texture
+	//fragColor = texture(backgroundTexture, screenCoord) * vec4(1.8, .2, .2, 1);
 	//return;
 
 	// ------- Reconstruct normal -------
@@ -107,6 +116,16 @@ void main()
 	vec3 refDir = reflect(viewDirection, N);
 	if (refDir.y > .5) refDir.y = -refDir.y;
 	diffuse = diffuse + fresnel * texture(reflectionTexture, refDir).xyz;
+
+	// BACKGROUND DISTORTION
+	float thickness = texture(thicknessTexture, screenCoord).x;
+	float distPwr = 1 - thickness;
+	diffuse = (1 - distPwr) * diffuse + distPwr * texture(backgroundTexture,
+		screenCoord + N.xy * .025 * thickness).xyz;
+
+	// DEBUG: Color due to absorbation
+	//fragColor = vec4(mix(vec3(1), diffuse, thickness), 1);
+	//return;
 
 	// SPECULAR
 	vec3 specular = vec3(0);

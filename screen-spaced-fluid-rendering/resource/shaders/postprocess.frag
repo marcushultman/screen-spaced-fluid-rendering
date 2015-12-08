@@ -1,19 +1,13 @@
 #version 330
 
-uniform sampler2D frameBufferTexture;
+uniform sampler2D source;
+uniform sampler2D depth;
 
-out vec4 fragmentColor;
+out vec4 fragColor;
 
-void main() 
+void main()
 {
-	vec4 color = texture(frameBufferTexture, gl_FragCoord.xy / textureSize(frameBufferTexture, 0));
-	//float mean = (color.r + color.g + color.b) / 3.0;
-	//fragmentColor = vec4(mean, mean, mean, 1);
-	fragmentColor = color;
-
-	if (textureSize(frameBufferTexture, 0).x == 1)
-	{
-		fragmentColor = vec4(1, 0, 0, 1);
-		return;
-	}
+	vec2 screenCoord = gl_FragCoord.xy / textureSize(source, 0);
+	fragColor = texture(source, screenCoord);
+	gl_FragDepth = texture(depth, screenCoord).x;
 }

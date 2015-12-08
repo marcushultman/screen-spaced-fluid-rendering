@@ -54,7 +54,8 @@ private:
 		m_particleProgram,
 		m_dataProgram,
 		m_samplingProgram,
-		m_blurProgram;
+		m_blurProgram,
+		m_postProcessProgram;
 
 	GLuint m_reflectionTexture;
 
@@ -69,7 +70,9 @@ public:
 
 	void update();
 
-	void draw(GLuint FBO, const glm::mat4 view, const glm::mat4 projection);
+	void preProcessPass(const glm::mat4 view, const glm::mat4 projection);
+	void postProcessPass(GLuint backgroundTexture,
+		const glm::mat4 view, const glm::mat4 proj);
 
 private:
 	void setupVAO(float size);

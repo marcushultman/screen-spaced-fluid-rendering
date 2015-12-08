@@ -1,12 +1,11 @@
 #version 330
 
-uniform samplerCube s_texture;
+uniform samplerCube uTexture;
 
-in vec3 TexCoord;
-
-out vec4 fragmentColor;
+in vec3 texCoord;
+out vec4 fragColor;
 
 void main()
 {
-	fragmentColor = texture(s_texture, TexCoord);
+	fragColor = texture(uTexture, texCoord);
 }

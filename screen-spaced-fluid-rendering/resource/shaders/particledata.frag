@@ -28,12 +28,9 @@ void main()
 	gl_FragDepth = clipSpacePos.z / clipSpacePos.w;
 
 	// Thickness
-	//thickness = vec4(vec3(1), 1);
-	thickness = vec4(.1 * vec3(1 - r2), 0);
+	thickness = vec4(.2 * vec3(1 - r2), 1);
 
-	// ------- Debug -------
-
-	// Linearized depth
-	float z = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
-	fragColor = vec4(vec3(z), 1);
+	// DEBUG: Linearized depth
+	//float z = (2 * znear) / (zfar + znear - gl_FragDepth * (zfar - znear));
+	//fragColor = vec4(vec3(z), 1);
 }
