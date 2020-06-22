@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.16)
 project(screen-spaced-fluid-rendering)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_BUILD_TYPE release)
 list(APPEND CXX_FLAGS "-stdlib=libc++")
 
 find_package(OpenGL REQUIRED)
