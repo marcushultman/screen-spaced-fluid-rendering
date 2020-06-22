@@ -45,9 +45,9 @@
 #define FAR_PLANE 1250.0f
 #define FOV 0.75f
 
-static const vec3 X_AXIS(1, 0, 0);
-static const vec3 Y_AXIS(0, 1, 0);
-static const vec3 Z_AXIS(0, 0, 1);
+static const glm::vec3 X_AXIS(1, 0, 0);
+static const glm::vec3 Y_AXIS(0, 1, 0);
+static const glm::vec3 Z_AXIS(0, 0, 1);
 
 
 static unsigned int			s_cameraIndex = 0;
@@ -260,8 +260,10 @@ void setupPostProcessShader()
 	auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/quad.vert");
 	auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/postprocess.frag");
 
-	glShaderSource(vertexShader, 1, &vv, NULL);
-	glShaderSource(fragmentShader, 1, &ff, NULL);
+  auto p = vv.c_str();
+	glShaderSource(vertexShader, 1, &p, NULL);
+  p = ff.c_str();
+	glShaderSource(fragmentShader, 1, &p, NULL);
 
 	int compileOK;
 

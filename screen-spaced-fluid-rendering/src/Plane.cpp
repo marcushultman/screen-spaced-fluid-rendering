@@ -70,8 +70,10 @@ void Plane::load(float width, float height)
 	auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/simple.vert");
 	auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/simple.frag");
 
-	glShaderSource(vertexShader, 1, &vv, NULL);
-	glShaderSource(fragmentShader, 1, &ff, NULL);
+  auto p = vv.c_str();
+	glShaderSource(vertexShader, 1, &p, NULL);
+  p = ff.c_str();
+	glShaderSource(fragmentShader, 1, &p, NULL);
 
 	glCompileShader(vertexShader);
 	glCompileShader(fragmentShader);

@@ -19,8 +19,10 @@ void SkyBox::load()
 	auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/skybox.vert");
 	auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/skybox.frag");
 
-	glShaderSource(vertexShader, 1, &vv, NULL);
-	glShaderSource(fragmentShader, 1, &ff, NULL);
+  auto p = vv.c_str();
+	glShaderSource(vertexShader, 1, &p, NULL);
+  p = ff.c_str();
+	glShaderSource(fragmentShader, 1, &p, NULL);
 
 	glCompileShader(vertexShader);
 	glCompileShader(fragmentShader);

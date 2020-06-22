@@ -10,6 +10,10 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(DevIL REQUIRED)
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/screen-spaced-fluid-rendering/include/config.h.in
+  ${CMAKE_BINARY_DIR}/include/config.h)
+
 set(FILES
   Box.cpp
   FirstPersonCamera.cpp
@@ -49,4 +53,5 @@ target_include_directories(
   ssfr
   PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/screen-spaced-fluid-rendering/include"
+  ${CMAKE_BINARY_DIR}/include
 )

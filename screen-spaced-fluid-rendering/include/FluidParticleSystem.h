@@ -1,81 +1,60 @@
 #pragma once
 
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <GL/glew.h>
-
 #include <vector>
-
+#include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/matrix_access.hpp>
 
-#include <IL/il.h>
+class FluidParticleSystem {
+ public:
+  FluidParticleSystem(float particle_size,
+                      unsigned int width,
+                      unsigned int height,
+                      float near_plane,
+                      float far_plane);
+  ~FluidParticleSystem();
 
-#include "textfile.h"
+  void setPositions(std::vector<glm::vec3> positions);
 
-using glm::mat4;
-using glm::vec3;
-using glm::vec4;
+  void update();
 
-class FluidParticleSystem
-{
-private:
-	
-	GLuint m_VAO;
-	GLuint m_positionBuffer;
+  void preProcessPass(const glm::mat4 &view, const glm::mat4 &projection);
+  void postProcessPass(GLuint background_texture, const glm::mat4 &view, const glm::mat4 &proj);
 
-	std::vector<glm::vec3> m_positions;
+ private:
+  void setupVAO(float size);
 
+  void setupDataFBO();
+  void setupBlurFBO();
+  void setupBlurBuffer(GLuint fbo, GLuint texture);
 
-	GLuint m_dataFBO, m_blurFBO1, m_blurFBO2;
-	unsigned int m_screenWidth, m_screenHeight;
-	float m_nearPlane, m_farPlane;
+  void setupShaders(float particle_size);
+  GLuint setupShader(GLuint type, const std::string &filename);
+  void setupCubeMap();
 
-	GLuint m_dataTexture, m_thicknessTexture,  // Geomery pass
-		m_colorTexture;
-	GLuint m_blurTexture1, m_blurTexture2; // Blur pass
+  void dataPass(const glm::mat4 &view, const glm::mat4 &proj);
+  void blurPass();
+  void renderPass(const glm::mat4 &view, const glm::mat4 &proj);
 
-	GLuint
-		m_particleProgram,
-		m_dataProgram,
-		m_blurProgram,
-		m_postProcessProgram;
+  void drawParticles(GLuint program, const glm::mat4 &view, const glm::mat4 &proj);
+  void drawQuad();
 
-	GLuint m_reflectionTexture;
+  GLuint _vertex_array_object;
+  GLuint _position_array_buffer;
 
-public:
+  size_t _num_particles = 0;
 
-	FluidParticleSystem(float particleSize,
-		unsigned int screenWidth, unsigned int screenHeight,
-		float nearPlane, float farPlane);
-	~FluidParticleSystem();
+  GLuint _data_fbo;
+  GLuint _blur_fbo[2];
 
-	void setPositions(std::vector<glm::vec3> positions);
+  const unsigned int _width, _height;
+  const float _near_plane, _far_plane;
 
-	void update();
+  GLuint _data_texture, _thickness_texture;
+  GLuint _blur_texture[2];
 
-	void preProcessPass(const glm::mat4 view, const glm::mat4 projection);
-	void postProcessPass(GLuint backgroundTexture,
-		const glm::mat4 view, const glm::mat4 proj);
-
-private:
-	void setupVAO(float size);
-	void setupDataFBO();
-	void setupBlurFBO();
-	void setupShaders(float size);
-
-	void dataPass(const glm::mat4 view, const glm::mat4 proj);
-	void blurPass();
-	void renderPass(const glm::mat4 view, const glm::mat4 proj);
-
-	void drawParticles(GLuint program,
-		const glm::mat4 view, const glm::mat4 proj);
-	void drawQuad();
+  GLuint _particle_program, _data_program, _blur_program;
+  GLuint _reflection_texture;
 };
-

@@ -279,8 +279,10 @@ GLuint Model::CreateShaderProgram()
 	auto vv = textFileRead(vertexFileName.c_str());
 	auto ff = textFileRead(fragmentFileName.c_str());
 
-	glShaderSource(vertexShader, 1, &vv, NULL);
-	glShaderSource(fragmentShader, 1, &ff, NULL);
+  auto p = vv.c_str();
+	glShaderSource(vertexShader, 1, &p, NULL);
+  p = ff.c_str();
+	glShaderSource(fragmentShader, 1, &p, NULL);
 
 	int compileOK;
 
