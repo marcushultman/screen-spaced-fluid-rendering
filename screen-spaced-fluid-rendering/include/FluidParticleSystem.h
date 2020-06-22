@@ -7,15 +7,15 @@
 
 #include <vector>
 
-#include <glm\glm.hpp>
-#include <glm\matrix.hpp>
-#include <glm\vec3.hpp>
-#include <glm\vec4.hpp>
-#include <glm\gtc\type_ptr.hpp>
-#include <glm\gtc\matrix_transform.hpp>
-#include <glm\gtc\matrix_access.hpp>
+#include <glm/glm.hpp>
+#include <glm/matrix.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_access.hpp>
 
-#include <IL\il.h>
+#include <IL/il.h>
 
 #include "textfile.h"
 
@@ -33,27 +33,17 @@ private:
 	std::vector<glm::vec3> m_positions;
 
 
-	GLuint m_dataFBO, m_blurFBO;
+	GLuint m_dataFBO, m_blurFBO1, m_blurFBO2;
 	unsigned int m_screenWidth, m_screenHeight;
 	float m_nearPlane, m_farPlane;
 
 	GLuint m_dataTexture, m_thicknessTexture,  // Geomery pass
 		m_colorTexture;
-	GLuint m_blurTexture; // Blur pass
-
-
-	const char* m_particleVertexShaderFile = "resource/shaders/particle.vert";
-	const char* m_particleFragmentShaderFile = "resource/shaders/particle.frag";
-	const char* m_dataFragmentShaderFile = "resource/shaders/particledata.frag";
-
-	const char* m_quadVertexShaderFile = "resource/shaders/quad.vert";
-	const char* m_quadFragmentShaderFile = "resource/shaders/quad.frag";
-	const char* m_blurFragmentShaderFile = "resource/shaders/blur.frag";
+	GLuint m_blurTexture1, m_blurTexture2; // Blur pass
 
 	GLuint
 		m_particleProgram,
 		m_dataProgram,
-		m_samplingProgram,
 		m_blurProgram,
 		m_postProcessProgram;
 

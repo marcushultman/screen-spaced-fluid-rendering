@@ -1,6 +1,8 @@
 #include "FluidParticleSystem.h"
 
-#define SAMPLING_SCALAR (2.0f/3.0f)
+#include <string>
+
+#include "textfile.h"
 
 FluidParticleSystem::FluidParticleSystem(float particleSize,
 	unsigned int screenWidth, unsigned int screenHeight,
@@ -112,7 +114,6 @@ void FluidParticleSystem::setupDataFBO(){
 	
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_colorTexture, 0);
-
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_dataTexture, 0);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, m_thicknessTexture, 0);
 
@@ -128,22 +129,38 @@ void FluidParticleSystem::setupDataFBO(){
 void FluidParticleSystem::setupBlurFBO()
 {
 	// Set up renderbuffer
-	glGenFramebuffers(1, &m_blurFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO);
+	glGenFramebuffers(1, &m_blurFBO1);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO1);
 
-	glGenTextures(1, &m_blurTexture);
-	glBindTexture(GL_TEXTURE_2D, m_blurTexture);
+	glGenTextures(1, &m_blurTexture1);
+	glBindTexture(GL_TEXTURE_2D, m_blurTexture1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-		SAMPLING_SCALAR * m_screenWidth,
-		SAMPLING_SCALAR * m_screenHeight,
+		m_screenWidth,
+		m_screenHeight,
 		0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_blurTexture, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_blurTexture1, 0);
+
+	// Set up renderbuffer
+	glGenFramebuffers(1, &m_blurFBO2);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO2);
+
+	glGenTextures(1, &m_blurTexture2);
+	glBindTexture(GL_TEXTURE_2D, m_blurTexture2);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		m_screenWidth,
+		m_screenHeight,
+		0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_blurTexture2, 0);
 
 	// Always check that our framebuffer is ok
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-		printf("There is a problem with the blur FBO\n");
+  auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE){
+    auto s = glGetString(status);
+		printf("There is a problem with the blur FBO: %s\n", s);
 		throw;
 	}
 
@@ -152,30 +169,31 @@ void FluidParticleSystem::setupBlurFBO()
 
 void FluidParticleSystem::setupShaders(float particleSize)
 {
-	GLuint particleVertexShader, particleFragmentShader, dataFragmentShader,
-		quadVertexShader, quadFragmentShader, blurFragmentShader;
+	GLuint
+    particleVertexShader,
+    particleFragmentShader,
+    dataFragmentShader,
+		quadVertexShader,
+    blurFragmentShader;
 	particleVertexShader = glCreateShader(GL_VERTEX_SHADER);
 	particleFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	dataFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
 	quadVertexShader = glCreateShader(GL_VERTEX_SHADER);
-	quadFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	blurFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * particleVertexShaderSource		= textFileRead(m_particleVertexShaderFile);
-	const char * particleFragmentShaderSource	= textFileRead(m_particleFragmentShaderFile);
-	const char * dataFragmentShaderSource		= textFileRead(m_dataFragmentShaderFile);
+	auto particleVertexShaderSource		= textFileRead("screen-spaced-fluid-rendering/resource/shaders/particle.vert");
+	auto particleFragmentShaderSource	= textFileRead("screen-spaced-fluid-rendering/resource/shaders/particle.frag");
+	auto dataFragmentShaderSource		= textFileRead("screen-spaced-fluid-rendering/resource/shaders/particledata.frag");
 
-	const char * quadVertexShaderSource		= textFileRead(m_quadVertexShaderFile);
-	const char * quadFragmentShaderSource	= textFileRead(m_quadFragmentShaderFile);
-	const char * blurFragmentShaderSource	= textFileRead(m_blurFragmentShaderFile);
+	auto quadVertexShaderSource		= textFileRead("screen-spaced-fluid-rendering/resource/shaders/quad.vert");
+	auto blurFragmentShaderSource	= textFileRead("screen-spaced-fluid-rendering/resource/shaders/blur.frag");
 
 	glShaderSource(particleVertexShader, 1, &particleVertexShaderSource, NULL);
 	glShaderSource(particleFragmentShader, 1, &particleFragmentShaderSource, NULL);
 	glShaderSource(dataFragmentShader, 1, &dataFragmentShaderSource, NULL);
 
 	glShaderSource(quadVertexShader, 1, &quadVertexShaderSource, NULL);
-	glShaderSource(quadFragmentShader, 1, &quadFragmentShaderSource, NULL);
 	glShaderSource(blurFragmentShader, 1, &blurFragmentShaderSource, NULL);
 
 	glCompileShader(particleVertexShader);
@@ -183,21 +201,21 @@ void FluidParticleSystem::setupShaders(float particleSize)
 	glCompileShader(dataFragmentShader);
 
 	glCompileShader(quadVertexShader);
-	glCompileShader(quadFragmentShader);
 	glCompileShader(blurFragmentShader);
 
-	int compileOK[6] = { 0, 0, 0, 0, 0, 0 };
+	int compileOK[6] = { 0, 0, 0, 0, 0 };
 	glGetShaderiv(particleVertexShader, GL_COMPILE_STATUS, &compileOK[0]);
 	glGetShaderiv(particleFragmentShader, GL_COMPILE_STATUS, &compileOK[1]);
 	glGetShaderiv(dataFragmentShader, GL_COMPILE_STATUS, &compileOK[2]);
 
 	glGetShaderiv(quadVertexShader, GL_COMPILE_STATUS, &compileOK[3]);
-	glGetShaderiv(quadFragmentShader, GL_COMPILE_STATUS, &compileOK[4]);
-	glGetShaderiv(blurFragmentShader, GL_COMPILE_STATUS, &compileOK[5]);
+	glGetShaderiv(blurFragmentShader, GL_COMPILE_STATUS, &compileOK[4]);
 	
-	for (unsigned int i = 0; i < 6; i++)
-		if (!compileOK[i])
-			throw;
+	for (unsigned int i = 0; i < 5; i++) {
+		if (!compileOK[i]) {
+	    throw;
+    }
+  }
 	//if (!(compileOK[0] + compileOK[1] + compileOK[2] + compileOK[3])) {
 	//	fprintf(stderr, "Compilation error in %s shader\n",
 	//		(!compileOK[0] ? "Vertex" :
@@ -221,14 +239,6 @@ void FluidParticleSystem::setupShaders(float particleSize)
 	glUniform1f(glGetUniformLocation(m_dataProgram, "sphereRadius"), particleSize);
 	glUniform1f(glGetUniformLocation(m_dataProgram, "znear"), m_nearPlane);
 	glUniform1f(glGetUniformLocation(m_dataProgram, "zfar"), m_farPlane);
-
-
-	m_samplingProgram = glCreateProgram();
-	glAttachShader(m_samplingProgram, quadVertexShader);
-	glAttachShader(m_samplingProgram, quadFragmentShader);
-	glLinkProgram(m_samplingProgram);
-	glValidateProgram(m_samplingProgram);
-	glUseProgram(m_samplingProgram);
 
 
 	m_blurProgram = glCreateProgram();
@@ -264,15 +274,15 @@ void FluidParticleSystem::setupShaders(float particleSize)
 		GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
 		GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 	};
-	std::wstring imageFilename [] = {
-		L"resource/envmap_miramar/miramar_bk.tga",
-		L"resource/envmap_miramar/miramar_ft.tga",
+	std::string imageFilename [] = {
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_bk.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_ft.tga",
 
-		L"resource/envmap_miramar/miramar_dn.tga",
-		L"resource/envmap_miramar/miramar_up.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_dn.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_up.tga",
 
-		L"resource/envmap_miramar/miramar_lf.tga",
-		L"resource/envmap_miramar/miramar_rt.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_lf.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_rt.tga",
 	};
 
 	ILuint imageIds[6];
@@ -331,24 +341,23 @@ void FluidParticleSystem::postProcessPass(GLuint backgroundTexture,
 	glBindTexture(GL_TEXTURE_2D, backgroundTexture);
 	glUniform1i(glGetUniformLocation(m_particleProgram, "backgroundTexture"), 0);
 
-
 	renderPass(view, proj);
 
-	return;
+	// return;
 
 #if defined(_DEBUG)
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_dataFBO);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // NOTE: Screen
 
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
-		0, 0, m_screenWidth / 4, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	// glReadBuffer(GL_COLOR_ATTACHMENT0);
+	// glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
+	// 	0, 0, m_screenWidth / 4, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	glBlitFramebuffer(0, 0, m_screenWidth, m_screenHeight,
 		m_screenWidth / 4, 0, m_screenWidth / 2, m_screenHeight / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	// glReadBuffer(GL_COLOR_ATTACHMENT0);
 #endif
 }
 
@@ -384,46 +393,47 @@ void FluidParticleSystem::dataPass(const glm::mat4 view, const glm::mat4 proj)
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 }
 
-void FluidParticleSystem::blurPass()
-{
-	glm::vec2 blurSize = glm::vec2(
-		SAMPLING_SCALAR * m_screenWidth,
-		SAMPLING_SCALAR * m_screenHeight);
-
+void FluidParticleSystem::blurPass() {
 	// Active source textures
 	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(glGetUniformLocation(m_samplingProgram, "source"), 0);
 	glUniform1i(glGetUniformLocation(m_blurProgram, "source"), 0);
-
-	// Downsample
-	glViewport(0, 0, blurSize.x, blurSize.y);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_blurFBO);
-	glClear(GL_DEPTH_BUFFER_BIT);
-
-	glUseProgram(m_samplingProgram);
-	glBindTexture(GL_TEXTURE_2D, m_dataTexture);
-	glUniform2f(glGetUniformLocation(m_samplingProgram, "screenSize"),
-		blurSize.x, blurSize.y);
-	drawQuad();
 
 	// Blur
 	glUseProgram(m_blurProgram);
-	glBindTexture(GL_TEXTURE_2D, m_blurTexture);
-	GLint orientLoc = glGetUniformLocation(m_blurProgram, "vertical");
-	for (unsigned int i = 0; i < 16; i++) {
-		glUniform1f(orientLoc, 0); drawQuad();
-		glUniform1f(orientLoc, 1); drawQuad();
+	auto direction_loc = glGetUniformLocation(m_blurProgram, "direction");
+  auto flip_loc = glGetUniformLocation(m_blurProgram, "flip");
+  auto screen_size_loc = glGetUniformLocation(m_blurProgram, "screenSize");
+
+  glUniform2f(screen_size_loc, m_screenWidth, m_screenHeight);
+
+  auto iterations = 8;
+  auto writeBuffer = m_blurFBO1;
+  auto readBuffer = m_blurFBO2;
+  auto writeTexture = m_blurTexture1;
+  auto readTexture = m_blurTexture2;
+
+	for (unsigned int i = 0; i < iterations; i++) {
+    auto radius = (iterations - i - 1) * 2.0f;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, writeBuffer);
+    glBindTexture(GL_TEXTURE_2D, i == 0 ? m_dataTexture : readTexture);
+
+	  auto direction = i % 2 == 0 ? glm::vec2(radius, 0) : glm::vec2(0, radius);
+    glUniform1i(flip_loc, 1);
+		glUniform2f(direction_loc, direction.x, direction.y);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    drawQuad();
+
+    std::swap(writeBuffer, readBuffer);
+    std::swap(writeTexture, readTexture);
 	}
 
-	// Upsample
-	glViewport(0, 0, m_screenWidth, m_screenHeight);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_dataFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	glUseProgram(m_samplingProgram);
-	glBindTexture(GL_TEXTURE_2D, m_blurTexture);
-	glUniform2f(glGetUniformLocation(m_samplingProgram, "screenSize"),
-		m_screenWidth, m_screenHeight);
+  glBindTexture(GL_TEXTURE_2D, readTexture);
+  glUniform1i(flip_loc, iterations % 2 != 0);
+	glUniform2f(direction_loc, 0, 0);
 	drawQuad();
 
 	glUseProgram(0);
@@ -460,6 +470,14 @@ void FluidParticleSystem::drawParticles(GLuint program,
 	glUniformMatrix4fv(glGetUniformLocation(program, "projection"),
 		1, GL_FALSE, glm::value_ptr(proj));
 
+  // Pre-compute inverses
+  auto invView = glm::inverse(view);
+  glUniformMatrix4fv(glGetUniformLocation(program, "invView"),
+		1, GL_FALSE, glm::value_ptr(invView));
+  auto invProj = glm::inverse(proj);
+  glUniformMatrix4fv(glGetUniformLocation(program, "invProjection"),
+		1, GL_FALSE, glm::value_ptr(invProj));
+
 	glBindVertexArray(m_VAO);
 	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0,
 		m_positions.size());
@@ -470,26 +488,37 @@ void FluidParticleSystem::drawParticles(GLuint program,
 
 void FluidParticleSystem::drawQuad()
 {
+  static auto init = false;
 	static GLuint s_quadVAO = 0;
-	if (s_quadVAO == 0) {
+	if (!init) {
+    init = true;
 		static const float positions [] = {
-			-1.0f, -1.0f,
-			1.0f, -1.0f,
 			1.0f, 1.0f,
 			-1.0f, 1.0f,
+			1.0f, -1.0f,
+			-1.0f, -1.0f,
 		};
+    const int indices [] = {
+      0, 1, 2,
+      2, 1, 3,
+    };
 
 		glGenVertexArrays(1, &s_quadVAO);
 		glBindVertexArray(s_quadVAO);
 
 		GLuint buffer;
+
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 		glGenBuffers(1, &buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, buffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
 	glBindVertexArray(s_quadVAO);
-	glDrawArrays(GL_QUADS, 0, 4);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }

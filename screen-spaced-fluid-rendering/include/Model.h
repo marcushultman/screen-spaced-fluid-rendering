@@ -1,30 +1,31 @@
 #pragma once
 
-#include <GL\glew.h>
+#include <GL/glew.h>
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 #include <string>
 #include <vector>
 #include <map>
 
 //Include Assimp
-#include <assimp\cimport.h>
-#include <assimp\scene.h>
-#include <assimp\postprocess.h>
-#include <assimp\vector3.h>
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/vector3.h>
 
 //Include DevIL for image loading
-#include <IL\il.h>
+#include <IL/il.h>
 
-#include <glm\matrix.hpp>
-#include <glm\gtc\type_ptr.hpp>
+#include <glm/matrix.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "textfile.h"
 
 using glm::mat4;
 using std::string;
-using std::wstring;
 using std::vector;
 using std::map;
 

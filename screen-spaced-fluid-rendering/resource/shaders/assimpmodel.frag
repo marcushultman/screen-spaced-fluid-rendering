@@ -34,7 +34,7 @@ void main()
         amb = ambient;
     }
     else {
-        color = texture2D(texUnit, TexCoord);
+        color = texture(texUnit, TexCoord);
         amb = color * 0.33;
     }
     fragmentColor = (color * intensity) + amb;

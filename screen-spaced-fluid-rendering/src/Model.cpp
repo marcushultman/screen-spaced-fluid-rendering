@@ -16,8 +16,8 @@ Model::Model(string path)
 	LoadTextures(folderPath);
 	GenerateVAO();
 
-	vertexFileName = "resource/shaders/assimpmodel.vert";
-	fragmentFileName = "resource/shaders/assimpmodel.frag";
+	vertexFileName = "screen-spaced-fluid-rendering/resource/shaders/assimpmodel.vert";
+	fragmentFileName = "screen-spaced-fluid-rendering/resource/shaders/assimpmodel.frag";
 
 	shaderProgram = CreateShaderProgram();
 }
@@ -25,23 +25,6 @@ Model::Model(string path)
 Model::~Model()
 {
 	aiReleaseImport(scene);
-}
-
-wstring string_to_wstring(const string& as)
-{
-	// deal with trivial case of empty string
-	if (as.empty())    return std::wstring();
-	// determine required length of new string
-	size_t reqLength = ::MultiByteToWideChar(CP_UTF8, 0, as.c_str(), (int) as.length(), 0, 0);
-
-	// construct new string of required length
-	std::wstring ret(reqLength, L'\0');
-
-	// convert old string to new string
-	::MultiByteToWideChar(CP_UTF8, 0, as.c_str(), (int) as.length(), &ret[0], (int) ret.length());
-
-	// return new string ( compiler should optimize this away )
-	return ret;
 }
 
 void Model::LoadTextures(string folderPath)
@@ -86,7 +69,7 @@ void Model::LoadTextures(string folderPath)
 		ilEnable(IL_ORIGIN_SET);
 		ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
 		string imagePath = folderPath + filename;
-		success = ilLoadImage(string_to_wstring(imagePath).c_str());
+		success = ilLoadImage(imagePath.c_str());
 
 		if (success) {
 			/* Convert image to RGBA */
@@ -147,8 +130,7 @@ void Model::GenerateVAO()
 		glGenBuffers(1, &buffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-			3 * mesh->mNumFaces *
-			sizeof(unsigned int),
+			3 * mesh->mNumFaces * sizeof(unsigned int),
 			indices,
 			GL_STATIC_DRAW);
 
@@ -157,8 +139,7 @@ void Model::GenerateVAO()
 			glGenBuffers(1, &buffer);
 			glBindBuffer(GL_ARRAY_BUFFER, buffer);
 			glBufferData(GL_ARRAY_BUFFER,
-				3 * mesh->mNumVertices *
-				sizeof(float),
+				3 * mesh->mNumVertices * sizeof(float),
 				mesh->mVertices,
 				GL_STATIC_DRAW);
 			glEnableVertexAttribArray(0);
@@ -170,8 +151,7 @@ void Model::GenerateVAO()
 			glGenBuffers(1, &buffer);
 			glBindBuffer(GL_ARRAY_BUFFER, buffer);
 			glBufferData(GL_ARRAY_BUFFER,
-				3 * mesh->mNumVertices *
-				sizeof(float),
+				3 * mesh->mNumVertices * sizeof(float),
 				mesh->mNormals,
 				GL_STATIC_DRAW);
 			glEnableVertexAttribArray(1);
@@ -296,8 +276,8 @@ GLuint Model::CreateShaderProgram()
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * vv = textFileRead(vertexFileName.c_str());
-	const char * ff = textFileRead(fragmentFileName.c_str());
+	auto vv = textFileRead(vertexFileName.c_str());
+	auto ff = textFileRead(fragmentFileName.c_str());
 
 	glShaderSource(vertexShader, 1, &vv, NULL);
 	glShaderSource(fragmentShader, 1, &ff, NULL);

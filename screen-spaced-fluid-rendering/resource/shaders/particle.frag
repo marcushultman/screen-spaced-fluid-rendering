@@ -1,7 +1,7 @@
 #version 330
 
-uniform mat4 view;
-uniform mat4 projection;
+uniform mat4 invView;
+uniform mat4 invProjection;
 
 uniform float znear;
 uniform float zfar;
@@ -16,25 +16,22 @@ in vec2 texCoord;
 in vec3 eyeSpacePos;
 in vec4 color;
 
-layout (location=0) out vec4 fragColor;
+layout (location=0) out vec3 fragColor;
 
-vec4 uvToEye(vec2 uv, float depth)
-{
+vec3 uvToEye(vec2 uv, float depth) {
 	vec4 clipSpacePos;
 	clipSpacePos.xy = uv.xy * 2.0f - 1.0f;
 	clipSpacePos.z = depth;
 	clipSpacePos.w = 1;
-	vec4 hPos = inverse(projection) * clipSpacePos;
-	return vec4(hPos.xyz / hPos.w, 1);
+	clipSpacePos = invProjection * clipSpacePos;
+	return clipSpacePos.xyz / clipSpacePos.w;
 }
 
-vec4 getEyePos(vec2 uv)
-{
+vec3 getEyePos(vec2 uv) {
 	return uvToEye(uv, texture(depthTexture, uv).x);
 }
 
-void main()
-{
+void main() {
 	// ------- Retrive depth -------
 	
 	vec2 screenSize = textureSize(depthTexture, 0);
@@ -44,20 +41,22 @@ void main()
 	
 	// Kill pixels outside circle
 	vec2 uv = texCoord * 2.0 - 1.0;
-	if (dot(uv, uv) > 1) discard;
+	if (dot(uv, uv) > 1) {
+    discard;
+  }
 
 	// DEBUG: Linearized depth
-	//depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
-	//fragColor = vec4(vec3(depth), 1);
-	//return;
+	// depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
+	// fragColor = vec3(depth);
+	// return;
 	
 	// DEBUG: Thickness
-	//fragColor = texture(thicknessTexture, screenCoord);
-	//return;
+	// fragColor = texture(thicknessTexture, screenCoord).xyz;
+	// return;
 
 	// DEBUG: Background texture
-	//fragColor = texture(backgroundTexture, screenCoord) * vec4(1.8, .2, .2, 1);
-	//return;
+	// fragColor = texture(backgroundTexture, screenCoord).xyz * vec3(1.8, .2, .2);
+	// return;
 
 	// ------- Reconstruct normal -------
 	
@@ -65,29 +64,24 @@ void main()
 	vec2 texelUnitY = vec2(0, texelUnit.y);
 	
 	// calculate eye-space position from depth
-	vec4 posEye = uvToEye(screenCoord, depth);
+	vec3 posEye = uvToEye(screenCoord, depth);
 	
 	// calculate differences
-	vec4 ddx = getEyePos(screenCoord + texelUnitX) - posEye;
-	vec4 ddx2 = posEye - getEyePos(screenCoord - texelUnitX);
-	if (abs(ddx.z) > abs(ddx2.z)) {
-		ddx = ddx2;
-	}
-	
-	vec4 ddy = getEyePos(screenCoord + texelUnitY) - posEye;
-	vec4 ddy2 = posEye - getEyePos(screenCoord - texelUnitY);
-	if (abs(ddy2.z) < abs(ddy.z)) {
-		ddy = ddy2;
-	}
-	
+	vec3 ddx = getEyePos(screenCoord + texelUnitX) - posEye;
+	vec3 ddx2 = posEye - getEyePos(screenCoord - texelUnitX);
+	ddx = abs(ddx.z) > abs(ddx2.z) ? ddx2 : ddx;
+
+	vec3 ddy = getEyePos(screenCoord + texelUnitY) - posEye;
+	vec3 ddy2 = posEye - getEyePos(screenCoord - texelUnitY);
+	ddy = abs(ddy.z) > abs(ddy2.z) ? ddy2 : ddy;
+
 	// Calculate world space normal
-	mat4 invView = inverse(view);
-	vec3 N = vec3(invView * vec4(normalize(cross(ddx.xyz, ddy.xyz)), 0));
+	vec3 N = vec3(invView * vec4(normalize(cross(ddx, ddy)), 0));
 	
 	// DEBUG: Render normal
-	//N = (N + vec3(1)) / 2.0;
-	//fragColor = vec4(N, 1);
-	//return;
+	// N = (N + vec3(1)) / 2.0;
+	// fragColor = N;
+	// return;
 
   
 	// ------- Render -------
@@ -96,7 +90,7 @@ void main()
 
 	// Light direction
 	vec4 lightDir = vec4(-.2, 1, 1, 0);
-	vec3 viewDirection = normalize(vec3(invView * vec4(0.0, 0.0, 0.0, 1.0) - posEye));
+	vec3 viewDirection = normalize(vec3(invView * vec4(0.0, 0.0, 0.0, 1.0) - vec4(posEye, 1)));
 	
 	float fresnelPwr = .8;
 	float fresnel = (1 - fresnelPwr) + fresnelPwr
@@ -110,7 +104,7 @@ void main()
 
 	// DIFFUSE
 	float diffPwr = attenuation * max(0.0, dot(N, lightDir.xyz));
-	vec3 diffuse = diffPwr * (invView * posEye).y * vec3(.01, .02, .03);
+	vec3 diffuse = diffPwr * (invView * vec4(posEye, 1)).y * vec3(.01, .02, .03);
 	
 	// CUBEMAP REFLECTION
 	vec3 refDir = reflect(viewDirection, N);
@@ -136,5 +130,5 @@ void main()
 		specular = attenuation * lightSpec * matSpec
 			* pow(max(0.0, dot(reflect(-lightDir.xyz, N), viewDirection)), matShininess);
 	}
-	fragColor = vec4(ambient + diffuse + specular, 1.0);
+	fragColor = ambient + diffuse + specular;
 }

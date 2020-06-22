@@ -34,42 +34,53 @@ void Plane::load(float width, float height)
 
 	const int indices [] = {
 		0, 1, 2,
-		2, 1, 3,
+    2, 1, 3,
 	};
 
 	glGenVertexArrays(1, &m_VAO);
 	glBindVertexArray(m_VAO);
 
 	GLuint buffer;
+
+	glGenBuffers(1, &buffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glGenBuffers(1, &buffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
+  glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	// Load shader
 	
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * vv = textFileRead("resource/shaders/simple.vert");
-	const char * ff = textFileRead("resource/shaders/simple.frag");
+	auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/simple.vert");
+	auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/simple.frag");
 
 	glShaderSource(vertexShader, 1, &vv, NULL);
 	glShaderSource(fragmentShader, 1, &ff, NULL);
 
 	glCompileShader(vertexShader);
 	glCompileShader(fragmentShader);
+
+	int compileOK;
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
+  assert(compileOK);
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
+  assert(compileOK);
 
 	m_shader = glCreateProgram();
 	glAttachShader(m_shader, vertexShader);
@@ -85,13 +96,15 @@ void Plane::load(float width, float height)
 	ILuint image = ilGenImage();
 	ilBindImage(image);
 
-	ilLoadImage(L"resource/ground.jpg");
+	ilLoadImage("screen-spaced-fluid-rendering/resource/ground.jpg");
 	ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-		ilGetInteger(IL_IMAGE_WIDTH),
-		ilGetInteger(IL_IMAGE_HEIGHT),
-		0, GL_RGB, GL_UNSIGNED_BYTE,
-		ilGetData());
+      ilGetInteger(IL_IMAGE_WIDTH),
+      ilGetInteger(IL_IMAGE_HEIGHT),
+      0,
+      GL_RGB,
+      GL_UNSIGNED_BYTE,
+      ilGetData());
 	ilDeleteImage(image);
 
 	// Set the filtering mode

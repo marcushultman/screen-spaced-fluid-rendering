@@ -16,8 +16,8 @@ void SkyBox::load()
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER); 
 	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * vv = textFileRead("resource/shaders/skybox.vert");
-	const char * ff = textFileRead("resource/shaders/skybox.frag");
+	auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/skybox.vert");
+	auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/skybox.frag");
 
 	glShaderSource(vertexShader, 1, &vv, NULL);
 	glShaderSource(fragmentShader, 1, &ff, NULL);
@@ -46,15 +46,15 @@ void SkyBox::load()
 		GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
 		GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 	};
-	std::wstring imageFilename [] = {
-		L"resource/envmap_miramar/miramar_bk.tga",
-		L"resource/envmap_miramar/miramar_ft.tga",
+	std::string imageFilename [] = {
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_bk.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_ft.tga",
 
-		L"resource/envmap_miramar/miramar_dn.tga",
-		L"resource/envmap_miramar/miramar_up.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_dn.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_up.tga",
 		
-		L"resource/envmap_miramar/miramar_lf.tga",
-		L"resource/envmap_miramar/miramar_rt.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_lf.tga",
+		"screen-spaced-fluid-rendering/resource/envmap_miramar/miramar_rt.tga",
 	};
 
 	ILuint imageIds[6];

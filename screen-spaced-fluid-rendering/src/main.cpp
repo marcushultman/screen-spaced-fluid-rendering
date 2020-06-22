@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 #include <string>
 #include <fstream>
@@ -40,7 +42,7 @@
 #define SCREEN_HEIGHT 960
 
 #define NEAR_PLANE 0.1f
-#define FAR_PLANE 500.0f
+#define FAR_PLANE 1250.0f
 #define FOV 0.75f
 
 static const vec3 X_AXIS(1, 0, 0);
@@ -79,7 +81,7 @@ static GLuint postProcessShader;
 static void onError(int error, const char* description)
 {
 	fputs(description, stderr);
-	_fgetchar();
+	// _fgetchar();
 }
 
 static void onKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -255,8 +257,8 @@ void setupPostProcessShader()
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	const char * vv = textFileRead("resource/shaders/quad.vert");
-	const char * ff = textFileRead("resource/shaders/postprocess.frag");
+	auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/quad.vert");
+	auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/postprocess.frag");
 
 	glShaderSource(vertexShader, 1, &vv, NULL);
 	glShaderSource(fragmentShader, 1, &ff, NULL);
@@ -265,8 +267,14 @@ void setupPostProcessShader()
 
 	glCompileShader(vertexShader);
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
-	if (!compileOK)
+	if (!compileOK) {
+      GLint len;
+	    glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &len);
+	    GLchar* s = new GLchar[len + 1];
+	    glGetShaderInfoLog(vertexShader, len, NULL, s);
+      printf("%s\n", s);
 		throw;
+  }
 
 	glCompileShader(fragmentShader);
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
@@ -284,7 +292,7 @@ void setupPostProcessShader()
 static void initialize(GLFWwindow* window)
 {
 	int width, height;
-	glfwGetWindowSize(window, &width, &height);
+	glfwGetFramebufferSize(window, &width, &height);
 
 	// Set up projection matrix
 	s_proj = glm::perspective(FOV, float(width) / float(height),
@@ -294,13 +302,12 @@ static void initialize(GLFWwindow* window)
 	setupMainFBO(width, height);
 	setupPostProcessShader();
 
-
 	s_skybox = new SkyBox();
 	s_plane = new Plane(floorSize.x, floorSize.y);
 
-	//Model::Load("resource/models/X/Testwuson.X");
-	//Model::Load("resource/models/X/dwarf.x");
-	s_dwarf = Model::Load("resource/models/X/dwarf.x");
+	//Model::Load("screen-spaced-fluid-rendering/resource/models/X/Testwuson.X");
+	//Model::Load("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
+	s_dwarf = Model::Load("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
 
 
 	// Create fluid particle system
@@ -316,7 +323,7 @@ static void initialize(GLFWwindow* window)
 		}
 	}		
 	s_particleSystem->setPositions(positions);
-	printf("Number of particles: %d\n", positions.size());
+	printf("Number of particles: %lu\n", positions.size());
 }
 
 static void update(double elapsedTime, GLFWwindow* window){
@@ -337,28 +344,39 @@ static void update(double elapsedTime, GLFWwindow* window){
 
 static void drawQuad()
 {
+  static auto init = false;
 	static GLuint s_quadVAO = 0;
-	if (s_quadVAO == 0) {
+	if (!init) {
+    init = true;
 		static const float positions [] = {
-			-1.0f, -1.0f,
-			1.0f, -1.0f,
 			1.0f, 1.0f,
 			-1.0f, 1.0f,
+			1.0f, -1.0f,
+			-1.0f, -1.0f,
 		};
+    const int indices [] = {
+      0, 1, 2,
+      2, 1, 3,
+    };
 
 		glGenVertexArrays(1, &s_quadVAO);
 		glBindVertexArray(s_quadVAO);
 
 		GLuint buffer;
+
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
 		glGenBuffers(1, &buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, buffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
 	glBindVertexArray(s_quadVAO);
-	glDrawArrays(GL_QUADS, 0, 4);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 static void draw(double elapsed_time, GLFWwindow* window)
 {
@@ -379,7 +397,6 @@ static void draw(double elapsed_time, GLFWwindow* window)
 
 	// Pre-process fluid
 	s_particleSystem->preProcessPass(view, s_proj);
-
 
 	// Render background
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -445,10 +462,11 @@ int main(int argc, char *argv [])
 	}
 
 	//Set the GLFW window creation hints - these are optional
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); //Request a specific OpenGL version
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3); //Request a specific OpenGL version
-	//glfwWindowHint(GLFW_SAMPLES, 4); //Request 4x antialiasing
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	// glfwWindowHint(GLFW_SAMPLES, 4); //Request 4x antialiasing
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//Declare a window object
 	GLFWwindow* window;
@@ -459,11 +477,15 @@ int main(int argc, char *argv [])
 		NULL);
 
 	if (!window){
-		fprintf(stderr, "Failed to open GLFW window.\n");
+		fprintf(stderr, "\nFailed to open GLFW window.\n");
 		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
 	glfwMakeContextCurrent(window);
+
+  int frameBufferWidth, frameBufferHeight;
+  glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+  glViewport(0, 0, frameBufferWidth, frameBufferHeight);
 
 	// Output some information
 	puts(glfwGetVersionString());

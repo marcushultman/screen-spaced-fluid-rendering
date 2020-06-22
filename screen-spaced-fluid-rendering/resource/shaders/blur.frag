@@ -1,35 +1,31 @@
 #version 330
 
 uniform sampler2D source;
+uniform vec2 direction;
+uniform bool flip;
+uniform vec2 screenSize;
 
-uniform float offset[3] = float[]( 0.0, 1.3846153846, 3.2307692308 );
-uniform float weight[3] = float[]( 0.2270270270, 0.3162162162, 0.0702702703 );
-uniform bool vertical;
+float offset[3] = float[]( 0.0f, 1.3846153846f, 3.2307692308f );
+float weight[3] = float[]( 0.2270270270f, 0.3162162162f, 0.0702702703f );
 
-vec2 dCoord(int i){
-	if (vertical)
-		return vec2(0.0, offset[i]);
-	return vec2(offset[i], 0.0);
+vec4 blur9(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
+  vec4 color = vec4(0);
+  vec2 off1 = vec2(1.3846153846) * direction;
+  vec2 off2 = vec2(3.2307692308) * direction;
+  color += texture(image, uv) * 0.2270270270;
+  color += texture(image, uv + (off1 / resolution)) * 0.3162162162;
+  color += texture(image, uv - (off1 / resolution)) * 0.3162162162;
+  color += texture(image, uv + (off2 / resolution)) * 0.0702702703;
+  color += texture(image, uv - (off2 / resolution)) * 0.0702702703;
+  return color;
 }
 
 void main()
 {
-	vec2 screenSize = textureSize(source, 0);
-	vec2 screenCoord = gl_FragCoord.xy / screenSize;
-	float depth = texture(source, screenCoord).x;
-	
-	float maxDepth = 1;
-	if (depth >= maxDepth) discard;
-
-	//gl_FragDepth = depth; return; // uncommment to disable blur
-	
-	depth *= weight[0];
-	for (int i = 1; i < 3; i++) {
-        depth += texture(source, 
-			(gl_FragCoord.xy + dCoord(i)) / screenSize).x * weight[i];
-        depth += texture(source,
-			(gl_FragCoord.xy - dCoord(i)) / screenSize).x * weight[i];
-    }
-
+  vec2 uv = vec2(gl_FragCoord.xy / screenSize);
+  if (flip) {
+    uv.y = 1.0 - uv.y;
+  }
+	float depth = blur9(source, uv, screenSize, direction).x;
 	gl_FragDepth = depth;
 }

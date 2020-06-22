@@ -10,10 +10,14 @@
 //////////////////////////////////////////////
 
 
+#include <string>
+#include <fstream>
+#include <streambuf>
+
+#ifdef _WIN32
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
 
 char *textFileRead(const char *fn) {
 
@@ -61,9 +65,22 @@ int textFileWrite(char *fn, char *s) {
 	return(status);
 }
 
+#else
 
+char *textFileRead(const char *filename) {
+  auto in = std::ifstream(filename);
+  std::string str((std::istreambuf_iterator<char>(in)),
+                   std::istreambuf_iterator<char>());
 
+  auto *content = (char *)malloc(sizeof(char) * (str.size() + 1));
+  std::copy(str.begin(), str.end(), content);
+  content[str.size()] = '\0';
 
+  return content;
+}
 
+int textFileWrite(char *fn, char *s) {
+  std::terminate();
+}
 
-
+#endif

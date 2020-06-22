@@ -282,5 +282,4 @@ _Pvt_Extensions
 sftp-config.json
 
 
-screen-spaced-fluid-rendering/resource/envmap_miramar/
-screen-spaced-fluid-rendering/resource/models/
+resource/
