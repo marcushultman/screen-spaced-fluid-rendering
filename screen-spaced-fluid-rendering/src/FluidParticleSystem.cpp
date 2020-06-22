@@ -98,7 +98,7 @@ void FluidParticleSystem::setupDataFBO() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, _data_texture, 0);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, _thickness_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, _thickness_texture, 0);
   auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -260,27 +260,25 @@ void FluidParticleSystem::postProcessPass(GLuint backgroundTexture,
   glBindFramebuffer(GL_READ_FRAMEBUFFER, _data_fbo);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-  glReadBuffer(GL_COLOR_ATTACHMENT1);
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
   glBlitFramebuffer(
       0, 0, _width, _height, 0, 0, _width / 4, _height / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 #endif
 }
 
 void FluidParticleSystem::dataPass(const glm::mat4 &view, const glm::mat4 &proj) {
-  static GLenum targets[2] = {GL_NONE, GL_COLOR_ATTACHMENT1};
-
   glBindFramebuffer(GL_FRAMEBUFFER, _data_fbo);
-  glDrawBuffers(2, targets);
-
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
   glClearColor(0, 0, 0, 0);
-  glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // Thickness (addative)
-  glEnablei(GL_BLEND, 1);
-  glBlendFunci(1, GL_ONE, GL_ONE);
+  // Thickness (blend, addative, no depth test)
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_ONE);
   glDisable(GL_DEPTH_TEST);
-  glDrawBuffer(GL_COLOR_ATTACHMENT1);
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
   drawParticles(_data_program, view, proj);
+  glBlendFunc(GL_ONE, GL_ZERO);
 
   // Particle depth
   glEnable(GL_DEPTH_TEST);
