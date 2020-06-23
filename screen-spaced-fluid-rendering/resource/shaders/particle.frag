@@ -85,10 +85,10 @@ void main() {
 
   // Light direction
   vec4 light_dir = vec4(-.2, 1, 1, 0);
-  vec3 view_direction = normalize(vec3(inv_view * vec4(0.0, 0.0, 0.0, 1.0) - vec4(posEye, 1)));
+  vec3 view_direction = normalize(vec3(inv_view * vec4(vec3(0), 1) - vec4(posEye, 1)));
 
   float fresnel_power = .8;
-  float fresnel = (1 - fresnel_power) + fresnel_power * pow(1 - dot(N, view_direction), 5);
+  float fresnel = (1 - fresnel_power) + fresnel_power * pow(1 - dot(N, view_direction), 1.5);
 
   float ambient_power = .15;
   float attenuation = .8;
@@ -103,13 +103,13 @@ void main() {
   // CUBEMAP REFLECTION
   vec3 ref_dir = reflect(view_direction, N);
   ref_dir.y *= ref_dir.y > .5 ? -1 : 1;
-  diffuse = diffuse + fresnel * texture(reflection_texture, ref_dir).xyz;
+  diffuse += fresnel * texture(reflection_texture, ref_dir).xyz;
 
   // BACKGROUND DISTORTION
   float thickness = texture(thickness_texture, screenCoord).x;
-  float distPwr = 1 - thickness;
-  diffuse = (1 - distPwr) * diffuse +
-            distPwr * texture(background_texture, screenCoord + N.xy * .025 * thickness).xyz;
+  float dist_power = 1 - thickness;
+  diffuse = (1 - dist_power) * diffuse +
+            dist_power * texture(background_texture, screenCoord + N.xy * .025 * thickness).xyz;
 
   // DEBUG: Color due to absorbation
   // frag_color = mix(vec3(1), diffuse, thickness);

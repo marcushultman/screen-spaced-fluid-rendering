@@ -12,8 +12,8 @@
 
 namespace {
 
-constexpr auto kBlurIterations = 8;
-constexpr auto kBlurRadius = 2.0f;
+constexpr auto kBlurIterations = 4;
+constexpr auto kBlurRadius = 1.8f;
 
 }  // namespace
 
