@@ -27,8 +27,7 @@ class FluidParticleSystem {
   void setupVAO(float size);
 
   void setupDataFBO();
-  void setupBlurFBO();
-  void setupBlurBuffer(GLuint fbo, GLuint texture);
+  void setupBuffer(GLuint fbo, GLuint depth_texture, GLuint thickness_texture);
 
   void setupShaders(float particle_size);
   GLuint setupShader(GLuint type, const std::string &filename);
@@ -41,19 +40,17 @@ class FluidParticleSystem {
   void drawParticles(GLuint program, const glm::mat4 &view, const glm::mat4 &proj);
   void drawQuad();
 
+  const unsigned int _width, _height;
+  const float _near_plane, _far_plane;
+
   GLuint _vertex_array_object;
   GLuint _position_array_buffer;
 
   size_t _num_particles = 0;
 
-  GLuint _data_fbo;
-  GLuint _blur_fbo[2];
-
-  const unsigned int _width, _height;
-  const float _near_plane, _far_plane;
-
-  GLuint _data_texture, _thickness_texture;
-  GLuint _blur_texture[2];
+  GLuint _data_fbo[2];
+  GLuint _depth_texture[2];
+  GLuint _thickness_texture[2];
 
   GLuint _particle_program, _data_program, _blur_program;
   GLuint _reflection_texture;

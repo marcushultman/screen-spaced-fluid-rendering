@@ -23,7 +23,6 @@ FluidParticleSystem::FluidParticleSystem(
   setupVAO(particle_size);
 
   setupDataFBO();
-  setupBlurFBO();
 
   setupShaders(particle_size);
 }
@@ -79,54 +78,32 @@ void FluidParticleSystem::setupVAO(float particleSize) {
 }
 
 void FluidParticleSystem::setupDataFBO() {
-  glGenFramebuffers(1, &_data_fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, _data_fbo);
+  glGenFramebuffers(2, _data_fbo);
+  glGenTextures(2, _depth_texture);
+  glGenTextures(2, _thickness_texture);
 
-  // Depth data
-  glGenTextures(1, &_data_texture);
-  glBindTexture(GL_TEXTURE_2D, _data_texture);
+  setupBuffer(_data_fbo[0], _depth_texture[0], _thickness_texture[0]);
+  setupBuffer(_data_fbo[1], _depth_texture[1], _thickness_texture[1]);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void FluidParticleSystem::setupBuffer(GLuint fbo, GLuint depth_texture, GLuint thickness_texture) {
+  glBindTexture(GL_TEXTURE_2D, depth_texture);
   glTexImage2D(
       GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-  // Thickess data
-  glGenTextures(1, &_thickness_texture);
-  glBindTexture(GL_TEXTURE_2D, _thickness_texture);
+  glBindTexture(GL_TEXTURE_2D, thickness_texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, _data_texture, 0);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, _thickness_texture, 0);
-  auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  assert(status == GL_FRAMEBUFFER_COMPLETE);
-}
-
-void FluidParticleSystem::setupBlurFBO() {
-  glGenFramebuffers(2, _blur_fbo);
-  glGenTextures(2, _blur_texture);
-
-  setupBlurBuffer(_blur_fbo[0], _blur_texture[0]);
-  setupBlurBuffer(_blur_fbo[1], _blur_texture[1]);
-}
-
-void FluidParticleSystem::setupBlurBuffer(GLuint fbo, GLuint texture) {
-  // generate depth buffer texture
-  glBindTexture(GL_TEXTURE_2D, texture);
-  glTexImage2D(
-      GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, _width, _height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-  // bind as frame_buffer_object depth buffer
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, thickness_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depth_texture, 0);
   auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
   assert(status == GL_FRAMEBUFFER_COMPLETE);
 }
 
@@ -267,64 +244,70 @@ void FluidParticleSystem::postProcessPass(GLuint background_texture,
 }
 
 void FluidParticleSystem::dataPass(const glm::mat4 &view, const glm::mat4 &proj) {
-  glBindFramebuffer(GL_FRAMEBUFFER, _data_fbo);
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  glBindFramebuffer(GL_FRAMEBUFFER, _data_fbo[0]);
   glClearColor(0, 0, 0, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // Thickness (blend, addative, no depth test)
+  // depth (depth buffer, no-blend, depth test, depth writes)
+  glDrawBuffer(GL_NONE);
+  glDisable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_ZERO);
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  drawParticles(_data_program, view, proj);
+
+  // thickness (color0, blend (addative), no depth test, no depth writes)
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
   glEnable(GL_BLEND);
   glBlendFunc(GL_ONE, GL_ONE);
   glDisable(GL_DEPTH_TEST);
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  glDepthMask(GL_FALSE);
   drawParticles(_data_program, view, proj);
-  glBlendFunc(GL_ONE, GL_ZERO);
 
-  // Particle depth
+  // reset (no-blend, depth test, depth writes)
+  glDisable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_ZERO);
   glEnable(GL_DEPTH_TEST);
-  glDrawBuffer(GL_NONE);
-  drawParticles(_data_program, view, proj);
+  glDepthMask(GL_TRUE);
 }
 
 void FluidParticleSystem::blurPass() {
-  glActiveTexture(GL_TEXTURE0);
-  glUniform1i(glGetUniformLocation(_blur_program, "source"), 0);
-
   glUseProgram(_blur_program);
+
+  glUniform1i(glGetUniformLocation(_blur_program, "depth_texture"), 0);
+  glUniform1i(glGetUniformLocation(_blur_program, "thickness_texture"), 1);
+
   auto direction_loc = glGetUniformLocation(_blur_program, "direction");
   auto flip_loc = glGetUniformLocation(_blur_program, "flip");
   auto screen_size_loc = glGetUniformLocation(_blur_program, "screenSize");
 
   glUniform2f(screen_size_loc, _width, _height);
 
-  auto write_buffer = _blur_fbo[0];
-  auto read_buffer = _blur_fbo[1];
-  auto write_texture = _blur_texture[0];
-  auto read_texture = _blur_texture[1];
+  auto read_buffer = _data_fbo[0];
+  auto write_buffer = _data_fbo[1];
+  GLuint read_texture[2] = {_depth_texture[0], _thickness_texture[0]};
+  GLuint write_texture[2] = {_depth_texture[1], _thickness_texture[1]};
+
+  static_assert(kBlurIterations % 2 == 0);
 
   for (auto i = 0; i < kBlurIterations; ++i) {
     auto radius = (kBlurIterations - i - 1) * kBlurRadius;
 
     glBindFramebuffer(GL_FRAMEBUFFER, write_buffer);
-    glBindTexture(GL_TEXTURE_2D, i == 0 ? _data_texture : read_texture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, read_texture[0]);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, read_texture[1]);
 
     auto direction = i % 2 == 0 ? glm::vec2(radius, 0) : glm::vec2(0, radius);
     glUniform1i(flip_loc, 1);
     glUniform2f(direction_loc, direction.x, direction.y);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     drawQuad();
 
     std::swap(write_buffer, read_buffer);
     std::swap(write_texture, read_texture);
   }
-
-  glBindFramebuffer(GL_FRAMEBUFFER, _data_fbo);
-  glClear(GL_DEPTH_BUFFER_BIT);
-
-  glBindTexture(GL_TEXTURE_2D, read_texture);
-  glUniform1i(flip_loc, kBlurIterations % 2 != 0);
-  glUniform2f(direction_loc, 0, 0);
-  drawQuad();
 
   glUseProgram(0);
 }
@@ -333,11 +316,11 @@ void FluidParticleSystem::renderPass(const glm::mat4 &view, const glm::mat4 &pro
   glUseProgram(_particle_program);
 
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, _data_texture);
+  glBindTexture(GL_TEXTURE_2D, _depth_texture[0]);
   glUniform1i(glGetUniformLocation(_particle_program, "depth_texture"), 1);
 
   glActiveTexture(GL_TEXTURE2);
-  glBindTexture(GL_TEXTURE_2D, _thickness_texture);
+  glBindTexture(GL_TEXTURE_2D, _thickness_texture[0]);
   glUniform1i(glGetUniformLocation(_particle_program, "thickness_texture"), 2);
 
   glActiveTexture(GL_TEXTURE3);

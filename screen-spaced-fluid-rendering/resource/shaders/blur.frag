@@ -1,12 +1,15 @@
 #version 330
 
-uniform sampler2D source;
+uniform sampler2D depth_texture;
+uniform sampler2D thickness_texture;
 uniform vec2 direction;
 uniform bool flip;
 uniform vec2 screenSize;
 
-float offset[3] = float[]( 0.0f, 1.3846153846f, 3.2307692308f );
-float weight[3] = float[]( 0.2270270270f, 0.3162162162f, 0.0702702703f );
+float offset[3] = float[](0.0f, 1.3846153846f, 3.2307692308f);
+float weight[3] = float[](0.2270270270f, 0.3162162162f, 0.0702702703f);
+
+layout(location = 0) out vec3 thickness;
 
 vec4 blur9(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
   vec4 color = vec4(0);
@@ -20,12 +23,11 @@ vec4 blur9(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
   return color;
 }
 
-void main()
-{
+void main() {
   vec2 uv = vec2(gl_FragCoord.xy / screenSize);
   if (flip) {
     uv.y = 1.0 - uv.y;
   }
-	float depth = blur9(source, uv, screenSize, direction).x;
-	gl_FragDepth = depth;
+  gl_FragDepth = blur9(depth_texture, uv, screenSize, direction).x;
+  thickness = blur9(thickness_texture, uv, screenSize, direction).xyz;
 }
