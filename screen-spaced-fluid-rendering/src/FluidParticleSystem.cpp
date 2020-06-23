@@ -245,14 +245,14 @@ void FluidParticleSystem::preProcessPass(const glm::mat4 &view, const glm::mat4 
   blurPass();
 }
 
-void FluidParticleSystem::postProcessPass(GLuint backgroundTexture,
+void FluidParticleSystem::postProcessPass(GLuint background_texture,
                                           const glm::mat4 &view,
                                           const glm::mat4 &proj) {
   glUseProgram(_particle_program);
 
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, backgroundTexture);
-  glUniform1i(glGetUniformLocation(_particle_program, "backgroundTexture"), 0);
+  glBindTexture(GL_TEXTURE_2D, background_texture);
+  glUniform1i(glGetUniformLocation(_particle_program, "background_texture"), 0);
 
   renderPass(view, proj);
 
@@ -334,15 +334,15 @@ void FluidParticleSystem::renderPass(const glm::mat4 &view, const glm::mat4 &pro
 
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, _data_texture);
-  glUniform1i(glGetUniformLocation(_particle_program, "depthTexture"), 1);
+  glUniform1i(glGetUniformLocation(_particle_program, "depth_texture"), 1);
 
   glActiveTexture(GL_TEXTURE2);
   glBindTexture(GL_TEXTURE_2D, _thickness_texture);
-  glUniform1i(glGetUniformLocation(_particle_program, "thicknessTexture"), 2);
+  glUniform1i(glGetUniformLocation(_particle_program, "thickness_texture"), 2);
 
   glActiveTexture(GL_TEXTURE3);
   glBindTexture(GL_TEXTURE_CUBE_MAP, _reflection_texture);
-  glUniform1i(glGetUniformLocation(_particle_program, "reflectionTexture"), 3);
+  glUniform1i(glGetUniformLocation(_particle_program, "reflection_texture"), 3);
 
   drawParticles(_particle_program, view, proj);
 }
@@ -352,18 +352,15 @@ void FluidParticleSystem::drawParticles(GLuint program,
                                         const glm::mat4 &proj) {
   glUseProgram(program);
 
-  // Send the VP to the vertex shader
-  glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "projection"), 1, GL_FALSE, glm::value_ptr(proj));
+  auto view_loc = glGetUniformLocation(program, "view");
+  auto projection_loc = glGetUniformLocation(program, "projection");
+  auto inv_view_loc = glGetUniformLocation(program, "inv_view");
+  auto inv_projection_loc = glGetUniformLocation(program, "inv_projection");
 
-  // Pre-compute inverses
-  auto inv_view = glm::inverse(view);
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "invView"), 1, GL_FALSE, glm::value_ptr(inv_view));
-  auto inv_proj = glm::inverse(proj);
-  glUniformMatrix4fv(
-      glGetUniformLocation(program, "invProjection"), 1, GL_FALSE, glm::value_ptr(inv_proj));
+  glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
+  glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(proj));
+  glUniformMatrix4fv(inv_view_loc, 1, GL_FALSE, glm::value_ptr(glm::inverse(view)));
+  glUniformMatrix4fv(inv_projection_loc, 1, GL_FALSE, glm::value_ptr(glm::inverse(proj)));
 
   glBindVertexArray(_vertex_array_object);
   glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, _num_particles);

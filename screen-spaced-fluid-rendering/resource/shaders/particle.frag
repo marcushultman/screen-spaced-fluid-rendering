@@ -1,60 +1,59 @@
 #version 330
 
-uniform mat4 invView;
-uniform mat4 invProjection;
+uniform mat4 inv_view;
+uniform mat4 inv_projection;
 
 uniform float znear;
 uniform float zfar;
 
-uniform sampler2D backgroundTexture;
-uniform sampler2D depthTexture;
-uniform sampler2D thicknessTexture;
-uniform samplerCube reflectionTexture;
+uniform sampler2D background_texture;
+uniform sampler2D depth_texture;
+uniform sampler2D thickness_texture;
+uniform samplerCube reflection_texture;
 
 in vec2 tex_coord;
 in vec3 eye_space_pos;
 in vec4 color;
 
-layout(location = 0) out vec3 fragColor;
+layout(location = 0) out vec3 frag_color;
 
 vec3 uvToEye(vec2 uv, float depth) {
   vec4 clipSpacePos;
   clipSpacePos.xy = uv.xy * 2.0f - 1.0f;
   clipSpacePos.z = depth;
   clipSpacePos.w = 1;
-  clipSpacePos = invProjection * clipSpacePos;
+  clipSpacePos = inv_projection * clipSpacePos;
   return clipSpacePos.xyz / clipSpacePos.w;
 }
 
 vec3 getEyePos(vec2 uv) {
-  return uvToEye(uv, texture(depthTexture, uv).x);
+  return uvToEye(uv, texture(depth_texture, uv).x);
 }
 
 void main() {
   // ------- Retrive depth -------
 
-  vec2 screenSize = textureSize(depthTexture, 0);
+  vec2 screenSize = textureSize(depth_texture, 0);
   vec2 texelUnit = 1.0 / (screenSize);
   vec2 screenCoord = gl_FragCoord.xy * texelUnit;
-  float depth = texture(depthTexture, screenCoord).x;
+  float depth = texture(depth_texture, screenCoord).x;
 
-  // Kill pixels outside circle
   vec2 uv = tex_coord * 2.0 - 1.0;
   if (dot(uv, uv) > 1) {
-    discard;
+    discard;  // outside circle
   }
 
   // DEBUG: Linearized depth
   // depth = (2 * znear) / (zfar + znear - depth * (zfar - znear));
-  // fragColor = vec3(depth);
+  // frag_color = vec3(depth);
   // return;
 
   // DEBUG: Thickness
-  // fragColor = texture(thicknessTexture, screenCoord).xyz;
+  // frag_color = texture(thickness_texture, screenCoord).xyz;
   // return;
 
   // DEBUG: Background texture
-  // fragColor = texture(backgroundTexture, screenCoord).xyz * vec3(1.8, .2, .2);
+  // frag_color = texture(background_texture, screenCoord).xyz * vec3(1.8, .2, .2);
   // return;
 
   // ------- Reconstruct normal -------
@@ -75,57 +74,55 @@ void main() {
   ddy = abs(ddy.z) > abs(ddy2.z) ? ddy2 : ddy;
 
   // Calculate world space normal
-  vec3 N = vec3(invView * vec4(normalize(cross(ddx, ddy)), 0));
+  vec3 N = vec3(inv_view * vec4(normalize(cross(ddx, ddy)), 0));
 
   // DEBUG: Render normal
   // N = (N + vec3(1)) / 2.0;
-  // fragColor = N;
+  // frag_color = N;
   // return;
 
   // ------- Render -------
 
-  vec4 viewPos;
-
   // Light direction
-  vec4 lightDir = vec4(-.2, 1, 1, 0);
-  vec3 viewDirection = normalize(vec3(invView * vec4(0.0, 0.0, 0.0, 1.0) - vec4(posEye, 1)));
+  vec4 light_dir = vec4(-.2, 1, 1, 0);
+  vec3 view_direction = normalize(vec3(inv_view * vec4(0.0, 0.0, 0.0, 1.0) - vec4(posEye, 1)));
 
-  float fresnelPwr = .8;
-  float fresnel = (1 - fresnelPwr) + fresnelPwr * pow(1 - dot(N, viewDirection), 5);
+  float fresnel_power = .8;
+  float fresnel = (1 - fresnel_power) + fresnel_power * pow(1 - dot(N, view_direction), 5);
 
-  float ambientPwr = .15;
+  float ambient_power = .15;
   float attenuation = .8;
 
   // AMBIENT
-  vec3 ambient = vec3(ambientPwr);
+  vec3 ambient = vec3(ambient_power);
 
   // DIFFUSE
-  float diffPwr = attenuation * max(0.0, dot(N, lightDir.xyz));
-  vec3 diffuse = diffPwr * (invView * vec4(posEye, 1)).y * vec3(.01, .02, .03);
+  float diff_power = attenuation * max(0.0, dot(N, light_dir.xyz));
+  vec3 diffuse = diff_power * (inv_view * vec4(posEye, 1)).y * vec3(.01, .02, .03);
 
   // CUBEMAP REFLECTION
-  vec3 refDir = reflect(viewDirection, N);
-  if (refDir.y > .5) refDir.y = -refDir.y;
-  diffuse = diffuse + fresnel * texture(reflectionTexture, refDir).xyz;
+  vec3 ref_dir = reflect(view_direction, N);
+  ref_dir.y *= ref_dir.y > .5 ? -1 : 1;
+  diffuse = diffuse + fresnel * texture(reflection_texture, ref_dir).xyz;
 
   // BACKGROUND DISTORTION
-  float thickness = texture(thicknessTexture, screenCoord).x;
+  float thickness = texture(thickness_texture, screenCoord).x;
   float distPwr = 1 - thickness;
   diffuse = (1 - distPwr) * diffuse +
-            distPwr * texture(backgroundTexture, screenCoord + N.xy * .025 * thickness).xyz;
+            distPwr * texture(background_texture, screenCoord + N.xy * .025 * thickness).xyz;
 
   // DEBUG: Color due to absorbation
-  // fragColor = vec4(mix(vec3(1), diffuse, thickness), 1);
+  // frag_color = mix(vec3(1), diffuse, thickness);
   // return;
 
   // SPECULAR
   vec3 specular = vec3(0);
-  vec3 lightSpec = vec3(.5);
-  vec3 matSpec = vec3(.3);
-  float matShininess = 10;
-  if (dot(N, lightDir.xyz) >= 0.0) {
-    specular = attenuation * lightSpec * matSpec *
-               pow(max(0.0, dot(reflect(-lightDir.xyz, N), viewDirection)), matShininess);
+  vec3 light_spec = vec3(.5);
+  vec3 mat_spec = vec3(.3);
+  float mat_shininess = 10;
+  if (dot(N, light_dir.xyz) >= 0.0) {
+    specular = attenuation * light_spec * mat_spec *
+               pow(max(0.0, dot(reflect(-light_dir.xyz, N), view_direction)), mat_shininess);
   }
-  fragColor = ambient + diffuse + specular;
+  frag_color = ambient + diffuse + specular;
 }
