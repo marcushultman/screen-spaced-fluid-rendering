@@ -87,7 +87,7 @@ void main() {
   vec4 light_dir = vec4(-.2, 1, 1, 0);
   vec3 view_direction = normalize(vec3(inv_view * vec4(vec3(0), 1) - vec4(posEye, 1)));
 
-  float fresnel_power = .8;
+  float fresnel_power = .6;
   float fresnel = (1 - fresnel_power) + fresnel_power * pow(1 - dot(N, view_direction), 1.5);
 
   float ambient_power = .15;

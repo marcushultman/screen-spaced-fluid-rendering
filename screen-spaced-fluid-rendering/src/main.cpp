@@ -66,8 +66,8 @@ glm::vec2 previousMousePos;
 
 // Particle system
 static FluidParticleSystem* s_particleSystem;
-float particleSize = 5.0f;
-float particleSep = 8.0f;
+float particleSize = 3.0f;
+float particleSep = 5.0f;
 
 // Post processing
 static GLuint mainBuffer;
@@ -315,10 +315,10 @@ static void initialize(GLFWwindow* window)
 	// Create fluid particle system
 	s_particleSystem = new FluidParticleSystem(particleSize,
 		width, height, NEAR_PLANE, FAR_PLANE);
-	int num = 8;
+	int num = 10;
 	std::vector<glm::vec3> positions;
 	for (int x = -num; x < num; x++){
-		for (int y = 0; y < 3; y++){
+		for (int y = 0; y < 5; y++){
 			for (int z = -num; z < num; z++){
 				positions.push_back(particleSep * glm::vec3(x, .75f + y, z));
 			}

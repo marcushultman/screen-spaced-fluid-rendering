@@ -13,7 +13,7 @@
 namespace {
 
 constexpr auto kBlurIterations = 4;
-constexpr auto kBlurRadius = 1.8f;
+constexpr auto kBlurRadius = 2.5f;
 
 }  // namespace
 

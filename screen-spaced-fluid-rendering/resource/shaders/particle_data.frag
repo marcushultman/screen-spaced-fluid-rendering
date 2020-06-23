@@ -23,5 +23,5 @@ void main() {
   gl_FragDepth = clip_space_pos.z / clip_space_pos.w;
 
   // thickness
-  thickness = vec4(.2 * vec3(1 - r2), 1);
+  thickness = vec4(.1 * vec3(1 - r2), 1);
 }
