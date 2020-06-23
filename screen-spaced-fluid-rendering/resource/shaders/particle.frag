@@ -11,8 +11,8 @@ uniform sampler2D depthTexture;
 uniform sampler2D thicknessTexture;
 uniform samplerCube reflectionTexture;
 
-in vec2 texCoord;
-in vec3 eyeSpacePos;
+in vec2 tex_coord;
+in vec3 eye_space_pos;
 in vec4 color;
 
 layout(location = 0) out vec3 fragColor;
@@ -39,7 +39,7 @@ void main() {
   float depth = texture(depthTexture, screenCoord).x;
 
   // Kill pixels outside circle
-  vec2 uv = texCoord * 2.0 - 1.0;
+  vec2 uv = tex_coord * 2.0 - 1.0;
   if (dot(uv, uv) > 1) {
     discard;
   }

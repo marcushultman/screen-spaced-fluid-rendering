@@ -1,31 +1,24 @@
 #version 330
 
-uniform mat4 world;
 uniform mat4 view;
 uniform mat4 projection;
 
-layout(location = 0) in vec3 aVertex;
-layout(location = 1) in vec2 aTexCoord;
-layout(location = 2) in vec3 aPosition;
+layout(location = 0) in vec3 _vertex_pos;
+layout(location = 1) in vec2 _tex_coord;
+layout(location = 2) in vec3 _particle_pos;
 
-out vec2 texCoord;
-out vec3 eyeSpacePos;
+out vec2 tex_coord;
+out vec3 eye_space_pos;
 
 void main() {
-  // Create world from view and aPosition
-  vec3 cameraPosition = inverse(view)[3].xyz;
-  vec3 look = normalize(cameraPosition - aPosition);
-  vec3 right = cross(vec3(0, 1, 0), look);
-  vec3 up2 = cross(look, right);
-  mat4 world;
-  world[0] = vec4(right, 0);
-  world[1] = vec4(up2, 0);
-  world[2] = vec4(look, 0);
-  world[3] = vec4(aPosition, 1);
+  vec3 cam_right = vec3(view[0][0], view[1][0], view[2][0]);
+  vec3 cam_up = vec3(view[0][1], view[1][1], view[2][1]);
 
-  vec4 viewPos = view * world * vec4(aVertex, 1);
-  gl_Position = projection * viewPos;
+  vec3 vertex_world = _particle_pos + cam_right * _vertex_pos.x + cam_up * _vertex_pos.y;
+  vec4 view_pos = view * vec4(vertex_world, 1);
 
-  texCoord = aTexCoord;
-  eyeSpacePos = viewPos.xyz;
+  gl_Position = projection * view_pos;
+
+  tex_coord = _tex_coord;
+  eye_space_pos = view_pos.xyz;
 }
