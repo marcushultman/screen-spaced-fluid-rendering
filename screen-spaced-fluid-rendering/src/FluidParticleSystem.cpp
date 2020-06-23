@@ -134,7 +134,7 @@ void FluidParticleSystem::setupShaders(float particle_size) {
   auto particle_vertex_shader = setupShader(GL_VERTEX_SHADER, "particle.vert");
   auto quad_vertex_shader = setupShader(GL_VERTEX_SHADER, "quad.vert");
 
-  auto data_fragment_shader = setupShader(GL_FRAGMENT_SHADER, "particledata.frag");
+  auto data_fragment_shader = setupShader(GL_FRAGMENT_SHADER, "particle_data.frag");
   auto blur_fragment_shader = setupShader(GL_FRAGMENT_SHADER, "blur.frag");
   auto particle_fragment_shader = setupShader(GL_FRAGMENT_SHADER, "particle.frag");
 
