@@ -30,18 +30,7 @@ FluidParticleSystem::FluidParticleSystem(
 FluidParticleSystem::~FluidParticleSystem() {}
 
 void FluidParticleSystem::setupVAO(float particleSize) {
-  const float positions[] = {particleSize,
-                             particleSize,
-                             0,
-                             -particleSize,
-                             particleSize,
-                             0,
-                             particleSize,
-                             -particleSize,
-                             0,
-                             -particleSize,
-                             -particleSize,
-                             0};
+  const float positions[] = {1, 1, -1, 1, 1, -1, -1, -1};
   const float texCoords[] = {1, 1, 0, 1, 1, 0, 0, 0};
   const int indices[] = {0, 1, 2, 2, 1, 3};
 
@@ -56,7 +45,7 @@ void FluidParticleSystem::setupVAO(float particleSize) {
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
   glGenBuffers(1, &buffer);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
@@ -352,28 +341,6 @@ void FluidParticleSystem::drawParticles(GLuint program,
 }
 
 void FluidParticleSystem::drawQuad() {
-  static std::optional<GLuint> _quad_vao;
-  if (!_quad_vao) {
-    const float positions[] = {1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f};
-    const int indices[] = {0, 1, 2, 2, 1, 3};
-
-    _quad_vao = 0;
-    glGenVertexArrays(1, &*_quad_vao);
-    glBindVertexArray(*_quad_vao);
-
-    GLuint buffer;
-
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-  }
-
-  glBindVertexArray(*_quad_vao);
+  glBindVertexArray(_vertex_array_object);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
