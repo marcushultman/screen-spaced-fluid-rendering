@@ -1,7 +1,7 @@
 #version 330
 
 uniform mat4 projection;
-uniform float sphereRadius;
+uniform float radius;
 
 in vec2 tex_coord;
 in vec3 eye_space_pos;
@@ -18,7 +18,7 @@ void main() {
   N.z = sqrt(1.0 - r2);
 
   // Depth
-  vec4 viewPos = vec4(eye_space_pos + N * sphereRadius, 1.0);
+  vec4 viewPos = vec4(eye_space_pos + N * radius, 1.0);
   vec4 clipSpacePos = projection * viewPos;
   gl_FragDepth = clipSpacePos.z / clipSpacePos.w;
 

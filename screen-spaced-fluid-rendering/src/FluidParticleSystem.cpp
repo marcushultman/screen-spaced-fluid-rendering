@@ -158,12 +158,12 @@ void FluidParticleSystem::setupShaders(float particle_size) {
   glValidateProgram(_particle_program);
 
   glUseProgram(_data_program);
-  glUniform1f(glGetUniformLocation(_data_program, "sphereRadius"), particle_size);
+  glUniform1f(glGetUniformLocation(_data_program, "radius"), particle_size);
   glUniform1f(glGetUniformLocation(_data_program, "znear"), _near_plane);
   glUniform1f(glGetUniformLocation(_data_program, "zfar"), _far_plane);
 
   glUseProgram(_particle_program);
-  glUniform1f(glGetUniformLocation(_particle_program, "sphereRadius"), particle_size);
+  glUniform1f(glGetUniformLocation(_particle_program, "radius"), particle_size);
   glUniform1f(glGetUniformLocation(_particle_program, "znear"), _near_plane);
   glUniform1f(glGetUniformLocation(_particle_program, "zfar"), _far_plane);
 
