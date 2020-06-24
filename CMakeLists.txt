@@ -21,7 +21,6 @@ set(FILES
   Model.cpp
   OrbitCamera.cpp
   Plane.cpp
-  ShaderProgram.cpp
   SkyBox.cpp
   main.cpp
   textfile.cpp
