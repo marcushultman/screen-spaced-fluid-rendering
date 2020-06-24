@@ -1,6 +1,6 @@
 #include "SkyBox.h"
 
-SkyBox::SkyBox()
+SkyBox::SkyBox() : m_box(1)
 {
 	load();
 }

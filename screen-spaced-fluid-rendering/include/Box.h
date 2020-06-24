@@ -2,14 +2,13 @@
 
 #include <GL/glew.h>
 
-class Box
-{
-private:
-	GLuint m_VAO;
-public:
-	Box();
-	Box(float size);
-	~Box();
-	void draw();
-};
+class Box {
+ public:
+  Box(float size);
+  ~Box();
 
+  void draw();
+
+ private:
+  GLuint _vertex_array_object;
+};
