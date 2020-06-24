@@ -9,7 +9,7 @@
 #include <glm/gtx/transform.hpp>
 #include "Camera.h"
 
-class OrbitCamera : Camera {
+class OrbitCamera : public Camera {
  public:
   enum Mode { NONE, ARC, PAN };
 

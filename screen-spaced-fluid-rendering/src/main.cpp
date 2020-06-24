@@ -1,28 +1,20 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 #include <fstream>
 #include <map>
 #include <string>
 #include <vector>
-
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include <IL/il.h>
 #include <assimp/cimport.h>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/vector3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <stdio.h>
+#include <stdlib.h>
 #include "Box.h"
 #include "FirstPersonCamera.h"
 #include "FluidParticleSystem.h"
@@ -30,7 +22,12 @@
 #include "OrbitCamera.h"
 #include "Plane.h"
 #include "SkyBox.h"
+#include "config.h"
 #include "textfile.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 namespace {
 
@@ -45,10 +42,14 @@ const auto X_AXIS = glm::vec3(1, 0, 0);
 const auto Y_AXIS = glm::vec3(0, 1, 0);
 const auto Z_AXIS = glm::vec3(0, 0, 1);
 
+const auto kFloorSize = glm::vec2(150.0, 150.0);
+
+const auto kParticleSize = 3.0f;
+const auto kParticleSep = 5.0f;
+
 class App {
  public:
   explicit App(GLFWwindow &window);
-  ~App();
 
   void mainLoop(GLFWwindow *window);
 
@@ -59,37 +60,35 @@ class App {
   void onMouseDown(int button, int action, int mods);
   void onMouseScroll(double xoffset, double yoffset);
 
-  void setupCallback(GLFWwindow *window);
+  void initialize(GLFWwindow *window);
   void setupMainFBO(int width, int height);
   void setupPostProcessShader();
-  void initialize(GLFWwindow *window);
   void update(double elapsedTime, GLFWwindow *window);
   void drawQuad();
   void draw(double elapsed_time, GLFWwindow *window);
 
   GLFWwindow &_window;
 
-  unsigned int s_cameraIndex = 0;
-  OrbitCamera s_camera = OrbitCamera(glm::vec3(0, 3, 0), glm::vec2(0, .5f));
-  FirstPersonCamera s_camera2;
-  glm::mat4 s_proj;
+  OrbitCamera _camera{glm::vec3(0, 3, 0), glm::vec2(0, .5f)};
+  FirstPersonCamera _fps_camera;
+  unsigned int _camera_index = 0;
+  std::vector<Camera *> _cameras = {&_camera, &_fps_camera};
+  glm::mat4 _projection;
 
-  Model *s_dwarf;
-  SkyBox *s_skybox;
-  Plane *s_plane;
-  glm::vec2 floorSize = glm::vec2(150.0, 150.0);
+  std::unique_ptr<Model> _dwarf;
+  std::unique_ptr<SkyBox> _skybox;
+  std::unique_ptr<Plane> _plane;
 
-  glm::vec2 previousMousePos;
+  glm::vec2 _prev_mouse_pos;
 
   // Particle system
-  FluidParticleSystem *s_particleSystem;
-  float particleSize = 3.0f;
-  float particleSep = 5.0f;
+  std::unique_ptr<FluidParticleSystem> _particle_system;
 
   // Post processing
-  GLuint mainBuffer;
-  GLuint mainBufferTexture, mainBufferDepth;
-  GLuint postProcessShader;
+  GLuint _frame_buffer_object;
+  GLuint _main_buffer_texture;
+  GLuint _main_buffer_depth;
+  GLuint _post_process_program;
 };
 
 }  // namespace
@@ -102,15 +101,19 @@ void onError(int error, const char *description) {
 }
 
 void App::onKeyDown(int key, int scancode, int action, int mods) {
-  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(&_window, GL_TRUE);
+  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+    glfwSetWindowShouldClose(&_window, GL_TRUE);
+  }
 
   // Terminate repeats
-  if (action == GLFW_REPEAT) return;
+  if (action == GLFW_REPEAT) {
+    return;
+  }
 
   if (mods & GLFW_MOD_SHIFT) {
-    s_camera2.setSpeed(500);
+    _fps_camera.setSpeed(500);
   } else {
-    s_camera2.setSpeed(250);
+    _fps_camera.setSpeed(250);
   }
 
   // Set velocity
@@ -118,11 +121,11 @@ void App::onKeyDown(int key, int scancode, int action, int mods) {
       // Camera movement
     case GLFW_KEY_W:
     case GLFW_KEY_S:
-      s_camera2.setVelocityZ(key == GLFW_KEY_W ? -action : action);
+      _fps_camera.setVelocityZ(key == GLFW_KEY_W ? -action : action);
       break;
     case GLFW_KEY_A:
     case GLFW_KEY_D:
-      s_camera2.setVelocityX(key == GLFW_KEY_A ? -action : action);
+      _fps_camera.setVelocityX(key == GLFW_KEY_A ? -action : action);
       break;
 
       // Arrow
@@ -151,7 +154,9 @@ void App::onKeyDown(int key, int scancode, int action, int mods) {
 
     case GLFW_KEY_P:
       // Toggle camera
-      if (action == GLFW_PRESS) s_cameraIndex = 1 - s_cameraIndex;
+      if (action == GLFW_PRESS) {
+        ++_camera_index;
+      }
       break;
 
     default:
@@ -160,31 +165,31 @@ void App::onKeyDown(int key, int scancode, int action, int mods) {
 }
 
 void App::onMouseMove(double xpos, double ypos) {
-  glm::vec2 dpos = glm::vec2(xpos - previousMousePos.x, previousMousePos.y - ypos);
+  glm::vec2 dpos = glm::vec2(xpos - _prev_mouse_pos.x, _prev_mouse_pos.y - ypos);
 
   // Camera control
-  if (s_cameraIndex == 0) {
-    if (s_camera.getMode() == OrbitCamera::Mode::ARC) {
-      s_camera.rotate(dpos);
-    } else if (s_camera.getMode() == OrbitCamera::Mode::PAN) {
-      s_camera.pan(dpos);
+  if (_camera_index % 2 == 0) {
+    if (_camera.getMode() == OrbitCamera::Mode::ARC) {
+      _camera.rotate(dpos);
+    } else if (_camera.getMode() == OrbitCamera::Mode::PAN) {
+      _camera.pan(dpos);
     }
   } else {
-    s_camera2.rotate(dpos);
+    _fps_camera.rotate(dpos);
   }
 
-  previousMousePos = glm::vec2(xpos, ypos);
+  _prev_mouse_pos = glm::vec2(xpos, ypos);
 }
 
 void App::onMouseDown(int button, int action, int mods) {
   // Rotation mode
   if (button == GLFW_MOUSE_BUTTON_1) {
     if (action == GLFW_PRESS) {
-      s_camera.setMode(glfwGetKey(&_window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
-                           ? OrbitCamera::Mode::ARC
-                           : OrbitCamera::Mode::PAN);
+      _camera.setMode(glfwGetKey(&_window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
+                          ? OrbitCamera::Mode::ARC
+                          : OrbitCamera::Mode::PAN);
     } else if (action == GLFW_RELEASE) {
-      s_camera.setMode(OrbitCamera::Mode::NONE);
+      _camera.setMode(OrbitCamera::Mode::NONE);
     }
   }
   // Enable mouse move
@@ -192,7 +197,7 @@ void App::onMouseDown(int button, int action, int mods) {
     if (action == GLFW_PRESS) {
       double x, y;
       glfwGetCursorPos(&_window, &x, &y);
-      previousMousePos = glm::vec2(x, y);
+      _prev_mouse_pos = glm::vec2(x, y);
       glfwSetCursorPosCallback(&_window, [](auto window, double xpos, double ypos) {
         static_cast<App *>(glfwGetWindowUserPointer(window))->onMouseMove(xpos, ypos);
       });
@@ -203,8 +208,8 @@ void App::onMouseDown(int button, int action, int mods) {
 }
 
 void App::onMouseScroll(double xoffset, double yoffset) {
-  if (s_cameraIndex == 0) {
-    s_camera.zoom((float)yoffset);
+  if (_camera_index % 2 == 0) {
+    _camera.zoom((float)yoffset);
   }
 }
 
@@ -212,92 +217,23 @@ void App::onMouseScroll(double xoffset, double yoffset) {
 
 App::App(GLFWwindow &window) : _window{window} {
   glfwSetWindowUserPointer(&_window, this);
-  setupCallback(&_window);
-  initialize(&_window);
-}
 
-void App::setupCallback(GLFWwindow *window) {
   // Keyboard strokes
   // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  glfwSetKeyCallback(window, [](auto window, int key, int scancode, int action, int mods) {
+  glfwSetKeyCallback(&_window, [](auto window, auto key, auto scancode, auto action, auto mods) {
     static_cast<App *>(glfwGetWindowUserPointer(window))->onKeyDown(key, scancode, action, mods);
   });
 
   // Mouse button (which in turn activates mouse movement)
-  glfwSetMouseButtonCallback(window, [](auto window, int button, int action, int mods) {
+  glfwSetMouseButtonCallback(&_window, [](auto window, auto button, auto action, auto mods) {
     static_cast<App *>(glfwGetWindowUserPointer(window))->onMouseDown(button, action, mods);
   });
 
-  glfwSetScrollCallback(window, [](auto window, double xoffset, double yoffset) {
+  glfwSetScrollCallback(&_window, [](auto window, auto xoffset, auto yoffset) {
     static_cast<App *>(glfwGetWindowUserPointer(window))->onMouseScroll(xoffset, yoffset);
   });
-}
 
-void App::setupMainFBO(int width, int height) {
-  // Set up renderbuffer
-  glGenFramebuffers(1, &mainBuffer);
-  glBindFramebuffer(GL_FRAMEBUFFER, mainBuffer);
-
-  // Color buffer
-  glGenTextures(1, &mainBufferTexture);
-  glBindTexture(GL_TEXTURE_2D, mainBufferTexture);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-  // Depth buffer
-  glGenTextures(1, &mainBufferDepth);
-  glBindTexture(GL_TEXTURE_2D, mainBufferDepth);
-  glTexImage2D(
-      GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, mainBufferTexture, 0);
-  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, mainBufferDepth, 0);
-
-  // Always check that our framebuffer is ok
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) throw;
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void App::setupPostProcessShader() {
-  GLuint vertexShader, fragmentShader;
-
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-  auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/quad.vert");
-  auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/postprocess.frag");
-
-  auto p = vv.c_str();
-  glShaderSource(vertexShader, 1, &p, NULL);
-  p = ff.c_str();
-  glShaderSource(fragmentShader, 1, &p, NULL);
-
-  int compileOK;
-
-  glCompileShader(vertexShader);
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &compileOK);
-  if (!compileOK) {
-    GLint len;
-    glGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &len);
-    GLchar *s = new GLchar[len + 1];
-    glGetShaderInfoLog(vertexShader, len, NULL, s);
-    printf("%s\n", s);
-    throw;
-  }
-
-  glCompileShader(fragmentShader);
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compileOK);
-  if (!compileOK) throw;
-
-  postProcessShader = glCreateProgram();
-  glAttachShader(postProcessShader, vertexShader);
-  glAttachShader(postProcessShader, fragmentShader);
-  glLinkProgram(postProcessShader);
-  glValidateProgram(postProcessShader);
+  initialize(&_window);
 }
 
 void App::initialize(GLFWwindow *window) {
@@ -305,44 +241,104 @@ void App::initialize(GLFWwindow *window) {
   glfwGetFramebufferSize(window, &width, &height);
 
   // Set up projection matrix
-  s_proj = glm::perspective(FOV, float(width) / float(height), NEAR_PLANE, FAR_PLANE);
+  const auto aspect_ratio = static_cast<float>(width) / static_cast<float>(height);
+  _projection = glm::perspective(FOV, aspect_ratio, NEAR_PLANE, FAR_PLANE);
 
   // Post process rendering
   setupMainFBO(width, height);
   setupPostProcessShader();
 
-  s_skybox = new SkyBox();
-  s_plane = new Plane(floorSize.x, floorSize.y);
-
-  // Model::Load("screen-spaced-fluid-rendering/resource/models/X/Testwuson.X");
-  // Model::Load("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
-  s_dwarf = new Model("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
+  _skybox = std::make_unique<SkyBox>();
+  _plane = std::make_unique<Plane>(kFloorSize.x, kFloorSize.y);
+  _dwarf = std::make_unique<Model>(config::kResourcesDir + "/models/X/dwarf.x");
 
   // Create fluid particle system
-  s_particleSystem = new FluidParticleSystem(particleSize, width, height, NEAR_PLANE, FAR_PLANE);
+  _particle_system =
+      std::make_unique<FluidParticleSystem>(kParticleSize, width, height, NEAR_PLANE, FAR_PLANE);
   int num = 10;
   std::vector<glm::vec3> positions;
   for (int x = -num; x < num; x++) {
     for (int y = 0; y < 5; y++) {
       for (int z = -num; z < num; z++) {
-        positions.push_back(particleSep * glm::vec3(x, .75f + y, z));
+        positions.push_back(kParticleSep * glm::vec3(x, .75f + y, z));
       }
     }
   }
-  s_particleSystem->setPositions(positions);
+  _particle_system->setPositions(positions);
   printf("Number of particles: %lu\n", positions.size());
 }
 
-void App::update(double elapsedTime, GLFWwindow *window) {
-  // Update camera position
-  if (s_cameraIndex == 0) {
-    s_camera.update(elapsedTime);
-  } else {
-    s_camera2.update((float)elapsedTime);
+void App::setupMainFBO(int width, int height) {
+  // Set up renderbuffer
+  glGenFramebuffers(1, &_frame_buffer_object);
+  glBindFramebuffer(GL_FRAMEBUFFER, _frame_buffer_object);
+
+  // Color buffer
+  glGenTextures(1, &_main_buffer_texture);
+  glBindTexture(GL_TEXTURE_2D, _main_buffer_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+  // Depth buffer
+  glGenTextures(1, &_main_buffer_depth);
+  glBindTexture(GL_TEXTURE_2D, _main_buffer_depth);
+  glTexImage2D(
+      GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, _main_buffer_texture, 0);
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, _main_buffer_depth, 0);
+
+  // Always check that our framebuffer is ok
+  assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void App::setupPostProcessShader() {
+  auto vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+  auto fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+
+  auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/quad.vert");
+  auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/postprocess.frag");
+
+  auto p = vv.c_str();
+  glShaderSource(vertex_shader, 1, &p, NULL);
+  p = ff.c_str();
+  glShaderSource(fragment_shader, 1, &p, NULL);
+
+  int ok;
+
+  glCompileShader(vertex_shader);
+  glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &ok);
+  if (!ok) {
+    GLint len;
+    glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &len);
+    GLchar *s = new GLchar[len + 1];
+    glGetShaderInfoLog(vertex_shader, len, NULL, s);
+    printf("%s\n", s);
+    throw;
   }
 
+  glCompileShader(fragment_shader);
+  glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &ok);
+  assert(ok);
+
+  _post_process_program = glCreateProgram();
+  glAttachShader(_post_process_program, vertex_shader);
+  glAttachShader(_post_process_program, fragment_shader);
+  glLinkProgram(_post_process_program);
+  glValidateProgram(_post_process_program);
+}
+
+void App::update(double elapsed_time, GLFWwindow *window) {
+  // Update camera position
+  _cameras[_camera_index % _cameras.size()]->update(elapsed_time);
+
   // TODO: Perform particle movement
-  // s_particleSystem->update();
+  // _particle_system->update();
 }
 
 void App::drawQuad() {
@@ -391,52 +387,44 @@ void App::drawQuad() {
 
 void App::draw(double elapsed_time, GLFWwindow *window) {
   // Clear the main buffer
-  glBindFramebuffer(GL_FRAMEBUFFER, mainBuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, _frame_buffer_object);
   glClearColor(0.390625f, 0.582031f, 0.925781f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Get view from camera
-  glm::vec3 cameraPosition = s_camera.getPosition();
-  glm::mat4 view = (s_cameraIndex == 0 ? s_camera.getView() : s_camera2.getView());
+  auto view = _cameras[_camera_index % _cameras.size()]->getView();
 
   // Draw backgound scene
-  s_skybox->draw(view, s_proj);
-  s_plane->draw(view, s_proj);
-  s_dwarf->draw(view, s_proj);
+  _skybox->draw(view, _projection);
+  _plane->draw(view, _projection);
+  _dwarf->draw(view, _projection);
 
   // Pre-process fluid
-  s_particleSystem->preProcessPass(view, s_proj);
+  _particle_system->preProcessPass(view, _projection);
 
   // Render background
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  glUseProgram(postProcessShader);
+  glUseProgram(_post_process_program);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, mainBufferTexture);
-  glUniform1i(glGetUniformLocation(postProcessShader, "source"), 0);
+  glBindTexture(GL_TEXTURE_2D, _main_buffer_texture);
+  glUniform1i(glGetUniformLocation(_post_process_program, "source"), 0);
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, mainBufferDepth);
-  glUniform1i(glGetUniformLocation(postProcessShader, "depth"), 1);
+  glBindTexture(GL_TEXTURE_2D, _main_buffer_depth);
+  glUniform1i(glGetUniformLocation(_post_process_program, "depth"), 1);
   glDepthFunc(GL_LEQUAL);
   drawQuad();
 
   // Post-process fluid
-  s_particleSystem->postProcessPass(mainBufferTexture, view, s_proj);
-}
-
-App::~App() {
-  delete s_skybox;
-  delete s_plane;
-  delete s_dwarf;
-
-  delete s_particleSystem;
+  _particle_system->postProcessPass(_main_buffer_texture, view, _projection);
 }
 
 void App::mainLoop(GLFWwindow *window) {
-  double old_time = glfwGetTime();
+  auto old_time = glfwGetTime();
   while (!glfwWindowShouldClose(window)) {
-    double current_time = glfwGetTime(), elapsed_time = (current_time - old_time);
+    auto current_time = glfwGetTime();
+    auto elapsed_time = (current_time - old_time);
     old_time = current_time;
 
     update(elapsed_time, window);

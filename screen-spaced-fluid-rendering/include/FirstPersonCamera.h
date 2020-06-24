@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include "Camera.h"
 
-class FirstPersonCamera : Camera {
+class FirstPersonCamera : public Camera {
  public:
   FirstPersonCamera();
   FirstPersonCamera(glm::vec3 position, glm::vec2 rotation, float speed);
