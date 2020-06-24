@@ -301,8 +301,8 @@ void App::setupPostProcessShader() {
   auto vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   auto fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
-  auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/quad.vert");
-  auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/postprocess.frag");
+  auto vv = textFileRead(config::kResourcesDir + "/shaders/quad.vert");
+  auto ff = textFileRead(config::kResourcesDir + "/shaders/postprocess.frag");
 
   auto p = vv.c_str();
   glShaderSource(vertex_shader, 1, &p, NULL);

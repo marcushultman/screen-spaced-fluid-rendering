@@ -2,6 +2,7 @@
 
 #include <IL/il.h>
 #include <glm/gtc/type_ptr.hpp>
+#include "config.h"
 #include "textfile.h"
 
 Plane::Plane(float size) : Plane(size, size) {}
@@ -42,8 +43,8 @@ Plane::Plane(float width, float height) {
   auto vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   auto fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
-  auto vv = textFileRead("screen-spaced-fluid-rendering/resource/shaders/simple.vert");
-  auto ff = textFileRead("screen-spaced-fluid-rendering/resource/shaders/simple.frag");
+  auto vv = textFileRead(config::kResourcesDir + "/shaders/simple.vert");
+  auto ff = textFileRead(config::kResourcesDir + "/shaders/simple.frag");
 
   auto p = vv.c_str();
   glShaderSource(vertex_shader, 1, &p, NULL);
@@ -73,7 +74,7 @@ Plane::Plane(float width, float height) {
   ILuint image = ilGenImage();
   ilBindImage(image);
 
-  ilLoadImage("screen-spaced-fluid-rendering/resource/ground.jpg");
+  ilLoadImage((config::kResourcesDir + "/ground.jpg").c_str());
   ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
   glTexImage2D(GL_TEXTURE_2D,
                0,
