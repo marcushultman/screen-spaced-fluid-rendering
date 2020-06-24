@@ -1,84 +1,53 @@
 #pragma once
 
-#include <GL/glew.h>
-
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
-#include <map>
-
-//Include Assimp
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/vector3.h>
-
-//Include DevIL for image loading
+#include <GL/glew.h>
 #include <IL/il.h>
-
-#include <glm/matrix.hpp>
+#include <assimp/cimport.h>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <assimp/vector3.h>
 #include <glm/gtc/type_ptr.hpp>
-
+#include <glm/matrix.hpp>
 #include "textfile.h"
 
-using glm::mat4;
-using std::string;
-using std::vector;
-using std::map;
-
-struct ModelMesh{
-	GLuint vertexArrayObject;
-	GLuint textureIndex;
-	GLuint uniformBlockIndex;
-	int numFaces;
+struct ModelMesh {
+  GLuint vertex_array_object;
+  GLuint texture_index;
+  GLuint uniform_block_index;
+  int num_faces;
 };
 
-struct Material{
-	float diffuse[4];
-	float ambient[4];
-	float specular[4];
-	float emissive[4];
-	float shininess;
-	int texCount;
+struct Material {
+  float diffuse[4];
+  float ambient[4];
+  float specular[4];
+  float emissive[4];
+  float shininess;
+  int tex_count;
 };
 
-class Model
-{
-private:
-	map<string, GLuint> textureIdMap;
+class Model {
+ public:
+  Model(const std::string &path);
+  ~Model();
 
-	const aiScene* scene = NULL;
-	GLuint scene_list = 0;
+  void draw(const glm::mat4 &view, const glm::mat4 &projection);
 
-	GLuint 
-		shaderProgram,
-		vertexArrayObject;
-	// MESHES
-	mat4 transform;
-	
-	string vertexFileName;
-	string fragmentFileName;
+ private:
+  void loadTextures(const std::string &basename);
+  void createVAO();
+  Material createMaterial(const aiMesh &mesh, ModelMesh &);
 
-	Model(string);
+  void drawNode(const aiNode &);
 
-	void LoadTextures(string);
-	void GenerateVAO();
-	Material GenerateMaterial(aiMesh*, ModelMesh *);
+  std::unordered_map<std::string, GLuint> _texture_id_map;
 
-	GLuint CreateShaderProgram();
-
-	void DrawNode(const aiNode*);
-public:
-	vector<ModelMesh> meshes;
-
-	~Model();
-	static Model* Load(string);
-
-	void Draw(mat4 view, mat4 projection);
-	mat4 GetTransform();
-	void SetTransform(mat4);
-	void Transform(mat4);
+  const aiScene *_scene = nullptr;
+  GLuint _scene_list = 0;
+  GLuint _program;
+  std::vector<ModelMesh> _meshes;
 };

@@ -309,7 +309,7 @@ static void initialize(GLFWwindow* window)
 
 	//Model::Load("screen-spaced-fluid-rendering/resource/models/X/Testwuson.X");
 	//Model::Load("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
-	s_dwarf = Model::Load("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
+	s_dwarf = new Model("screen-spaced-fluid-rendering/resource/models/X/dwarf.x");
 
 
 	// Create fluid particle system
@@ -393,7 +393,7 @@ static void draw(double elapsed_time, GLFWwindow* window)
 	// Draw backgound scene
 	s_skybox->draw(view, s_proj);
 	s_plane->draw(view, s_proj);
-	s_dwarf->Draw(view, s_proj);
+	s_dwarf->draw(view, s_proj);
 
 	// Pre-process fluid
 	s_particleSystem->preProcessPass(view, s_proj);
