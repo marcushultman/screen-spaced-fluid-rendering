@@ -332,9 +332,7 @@ static void update(double elapsedTime, GLFWwindow* window){
 
 	// Update camera position
 	if (s_cameraIndex == 0){
-		if (s_camera.getMode() == OrbitCamera::Mode::NONE){
-			s_camera.rotate(100 * elapsedTime, 0);
-		}
+		s_camera.update(elapsedTime);
 	}
 	else{
 		s_camera2.update((float) elapsedTime);
