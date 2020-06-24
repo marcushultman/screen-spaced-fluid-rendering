@@ -1,0 +1,9 @@
+#pragma once
+
+#include <string>
+
+namespace config {
+
+const auto kResourcesDir = std::string{"${CMAKE_SOURCE_DIR}/resource"};
+
+}  // namespace config

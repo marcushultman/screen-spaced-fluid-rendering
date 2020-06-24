@@ -1,9 +1,0 @@
-#pragma once
-
-#include <string>
-
-namespace config {
-
-const auto kResourcesDir = std::string{"${CMAKE_SOURCE_DIR}/screen-spaced-fluid-rendering/resource"};
-
-}  // namespace config

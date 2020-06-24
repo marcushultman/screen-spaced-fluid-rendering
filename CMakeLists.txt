@@ -11,7 +11,7 @@ find_package(glfw3 REQUIRED)
 find_package(DevIL REQUIRED)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/screen-spaced-fluid-rendering/include/config.h.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in
   ${CMAKE_BINARY_DIR}/include/config.h)
 
 set(FILES
@@ -27,7 +27,7 @@ set(FILES
 )
 
 foreach(f ${FILES})
-  list(APPEND SOURCES "screen-spaced-fluid-rendering/src/${f}")
+  list(APPEND SOURCES "src/${f}")
 endforeach()
 
 add_executable(ssfr ${SOURCES})
@@ -51,6 +51,6 @@ target_link_libraries(
 target_include_directories(
   ssfr
   PUBLIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/screen-spaced-fluid-rendering/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
   ${CMAKE_BINARY_DIR}/include
 )
