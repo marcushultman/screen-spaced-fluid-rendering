@@ -316,7 +316,7 @@ void App::setupPostProcessShader() {
   if (!ok) {
     GLint len;
     glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &len);
-    GLchar *s = new GLchar[len + 1];
+    GLchar s[len + 1];
     glGetShaderInfoLog(vertex_shader, len, NULL, s);
     printf("%s\n", s);
     throw;
