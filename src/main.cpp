@@ -44,9 +44,6 @@ const auto Z_AXIS = glm::vec3(0, 0, 1);
 
 const auto kFloorSize = glm::vec2(150.0, 150.0);
 
-const auto kParticleSize = 3.0f;
-const auto kParticleSep = 5.0f;
-
 class App {
  public:
   explicit App(GLFWwindow &window);
@@ -253,19 +250,7 @@ void App::initialize(GLFWwindow *window) {
   _dwarf = std::make_unique<Model>(config::kResourcesDir + "/models/X/dwarf.x");
 
   // Create fluid particle system
-  _particle_system =
-      std::make_unique<FluidParticleSystem>(kParticleSize, width, height, NEAR_PLANE, FAR_PLANE);
-  int num = 10;
-  std::vector<glm::vec3> positions;
-  for (int x = -num; x < num; x++) {
-    for (int y = 0; y < 5; y++) {
-      for (int z = -num; z < num; z++) {
-        positions.push_back(kParticleSep * glm::vec3(x, .75f + y, z));
-      }
-    }
-  }
-  _particle_system->setPositions(positions);
-  printf("Number of particles: %lu\n", positions.size());
+  _particle_system = std::make_unique<FluidParticleSystem>(width, height, NEAR_PLANE, FAR_PLANE);
 }
 
 void App::setupMainFBO(int width, int height) {
@@ -337,8 +322,7 @@ void App::update(double elapsed_time, GLFWwindow *window) {
   // Update camera position
   _cameras[_camera_index % _cameras.size()]->update(elapsed_time);
 
-  // TODO: Perform particle movement
-  // _particle_system->update();
+  _particle_system->update(elapsed_time);
 }
 
 void App::drawQuad() {

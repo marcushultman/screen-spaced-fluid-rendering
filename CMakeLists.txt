@@ -22,6 +22,7 @@ set(FILES
   OrbitCamera.cpp
   Plane.cpp
   SkyBox.cpp
+  fluid_positions.cpp
   main.cpp
   textfile.cpp
 )

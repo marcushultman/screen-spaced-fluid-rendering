@@ -7,38 +7,37 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 
+class FluidPositions;
+
 class FluidParticleSystem {
  public:
-  FluidParticleSystem(float particle_size,
-                      unsigned int width,
-                      unsigned int height,
-                      float near_plane,
-                      float far_plane);
+  FluidParticleSystem(unsigned int width, unsigned int height, float near_plane, float far_plane);
   ~FluidParticleSystem();
 
-  void setPositions(std::vector<glm::vec3> positions);
-
-  void update();
+  void update(double elapsed_time);
 
   void preProcessPass(const glm::mat4 &view, const glm::mat4 &projection);
   void postProcessPass(GLuint background_texture, const glm::mat4 &view, const glm::mat4 &proj);
 
  private:
-  void setupVAO(float size);
+  void setupPositions();
+
+  void setupVAO();
 
   void setupDataFBO();
   void setupBuffer(GLuint fbo, GLuint depth_texture, GLuint thickness_texture);
 
-  void setupShaders(float particle_size);
+  void setupShaders();
   GLuint setupShader(GLuint type, const std::string &filename);
   void setupCubeMap();
 
   void dataPass(const glm::mat4 &view, const glm::mat4 &proj);
   void blurPass();
-  void renderPass(const glm::mat4 &view, const glm::mat4 &proj);
 
   void drawParticles(GLuint program, const glm::mat4 &view, const glm::mat4 &proj);
   void drawQuad();
+
+  std::unique_ptr<FluidPositions> _positions;
 
   const unsigned int _width, _height;
   const float _near_plane, _far_plane;

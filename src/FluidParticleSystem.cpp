@@ -8,28 +8,38 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "config.h"
+#include "fluid_positions.h"
 #include "textfile.h"
 
 namespace {
 
+const auto kParticleSize = 3.0f;
+
 constexpr auto kBlurIterations = 4;
-constexpr auto kBlurRadius = 2.5f;
+// constexpr auto kBlurRadiusMin = 1.0f;
+// constexpr auto kBlurRadiusMax = 4.0f;
+constexpr auto kBlurRadius = 3.5f;
 
 }  // namespace
 
-FluidParticleSystem::FluidParticleSystem(
-    float particle_size, unsigned int width, unsigned int height, float near_plane, float far_plane)
-    : _width{width}, _height{height}, _near_plane{near_plane}, _far_plane{far_plane} {
-  setupVAO(particle_size);
-
+FluidParticleSystem::FluidParticleSystem(unsigned int width,
+                                         unsigned int height,
+                                         float near_plane,
+                                         float far_plane)
+    : _width{width},
+      _height{height},
+      _near_plane{near_plane},
+      _far_plane{far_plane},
+      _positions{std::make_unique<FluidPositions>()} {
+  setupVAO();
   setupDataFBO();
-
-  setupShaders(particle_size);
+  setupShaders();
+  setupPositions();
 }
 
 FluidParticleSystem::~FluidParticleSystem() {}
 
-void FluidParticleSystem::setupVAO(float particleSize) {
+void FluidParticleSystem::setupVAO() {
   const float positions[] = {1, 1, -1, 1, 1, -1, -1, -1};
   const float texCoords[] = {1, 1, 0, 1, 1, 0, 0, 0};
   const int indices[] = {0, 1, 2, 2, 1, 3};
@@ -96,7 +106,7 @@ void FluidParticleSystem::setupBuffer(GLuint fbo, GLuint depth_texture, GLuint t
   assert(status == GL_FRAMEBUFFER_COMPLETE);
 }
 
-void FluidParticleSystem::setupShaders(float particle_size) {
+void FluidParticleSystem::setupShaders() {
   auto particle_vertex_shader = setupShader(GL_VERTEX_SHADER, "particle.vert");
   auto quad_vertex_shader = setupShader(GL_VERTEX_SHADER, "quad.vert");
 
@@ -124,12 +134,10 @@ void FluidParticleSystem::setupShaders(float particle_size) {
   glValidateProgram(_particle_program);
 
   glUseProgram(_data_program);
-  glUniform1f(glGetUniformLocation(_data_program, "radius"), particle_size);
   glUniform1f(glGetUniformLocation(_data_program, "znear"), _near_plane);
   glUniform1f(glGetUniformLocation(_data_program, "zfar"), _far_plane);
 
   glUseProgram(_particle_program);
-  glUniform1f(glGetUniformLocation(_particle_program, "radius"), particle_size);
   glUniform1f(glGetUniformLocation(_particle_program, "znear"), _near_plane);
   glUniform1f(glGetUniformLocation(_particle_program, "zfar"), _far_plane);
 
@@ -193,43 +201,27 @@ void FluidParticleSystem::setupCubeMap() {
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-void FluidParticleSystem::setPositions(std::vector<glm::vec3> positions) {
-  _num_particles = positions.size();
+void FluidParticleSystem::setupPositions() {
+  _num_particles = _positions->size();
 
   glBindVertexArray(_vertex_array_object);
   glBindBuffer(GL_ARRAY_BUFFER, _position_array_buffer);
   glBufferData(
-      GL_ARRAY_BUFFER, sizeof(glm::vec3) * _num_particles, positions.data(), GL_DYNAMIC_DRAW);
+      GL_ARRAY_BUFFER, sizeof(glm::vec3) * _num_particles, _positions->data(), GL_DYNAMIC_DRAW);
+
+  printf("Number of particles: %lu\n", _num_particles);
 }
 
-void FluidParticleSystem::update() {
-  // TODO: Keep in sync with fluid motion
+void FluidParticleSystem::update(double elapsed_time) {
+  _positions->update(elapsed_time);
+
+  glBindBuffer(GL_ARRAY_BUFFER, _position_array_buffer);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * _num_particles, _positions->data());
 }
 
 void FluidParticleSystem::preProcessPass(const glm::mat4 &view, const glm::mat4 &proj) {
   dataPass(view, proj);
   blurPass();
-}
-
-void FluidParticleSystem::postProcessPass(GLuint background_texture,
-                                          const glm::mat4 &view,
-                                          const glm::mat4 &proj) {
-  glUseProgram(_particle_program);
-
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, background_texture);
-  glUniform1i(glGetUniformLocation(_particle_program, "background_texture"), 0);
-
-  renderPass(view, proj);
-
-#if defined(DEBUG)
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, _data_fbo);
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-  glReadBuffer(GL_COLOR_ATTACHMENT0);
-  glBlitFramebuffer(
-      0, 0, _width, _height, 0, 0, _width / 4, _height / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-#endif
 }
 
 void FluidParticleSystem::dataPass(const glm::mat4 &view, const glm::mat4 &proj) {
@@ -279,8 +271,10 @@ void FluidParticleSystem::blurPass() {
 
   static_assert(kBlurIterations % 2 == 0);
 
+  auto radius_coeff = kBlurRadius;
+
   for (auto i = 0; i < kBlurIterations; ++i) {
-    auto radius = (kBlurIterations - i - 1) * kBlurRadius;
+    auto radius = (kBlurIterations - 2 * static_cast<int>(i / 2) - 1) * radius_coeff;
 
     glBindFramebuffer(GL_FRAMEBUFFER, write_buffer);
     glActiveTexture(GL_TEXTURE0);
@@ -301,7 +295,15 @@ void FluidParticleSystem::blurPass() {
   glUseProgram(0);
 }
 
-void FluidParticleSystem::renderPass(const glm::mat4 &view, const glm::mat4 &proj) {
+void FluidParticleSystem::postProcessPass(GLuint background_texture,
+                                          const glm::mat4 &view,
+                                          const glm::mat4 &proj) {
+  glUseProgram(_particle_program);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, background_texture);
+  glUniform1i(glGetUniformLocation(_particle_program, "background_texture"), 0);
+
   glUseProgram(_particle_program);
 
   glActiveTexture(GL_TEXTURE1);
@@ -317,6 +319,15 @@ void FluidParticleSystem::renderPass(const glm::mat4 &view, const glm::mat4 &pro
   glUniform1i(glGetUniformLocation(_particle_program, "reflection_texture"), 3);
 
   drawParticles(_particle_program, view, proj);
+
+#if defined(DEBUG)
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, _data_fbo);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+  glReadBuffer(GL_COLOR_ATTACHMENT0);
+  glBlitFramebuffer(
+      0, 0, _width, _height, 0, 0, _width / 4, _height / 4, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+#endif
 }
 
 void FluidParticleSystem::drawParticles(GLuint program,
@@ -328,11 +339,13 @@ void FluidParticleSystem::drawParticles(GLuint program,
   auto projection_loc = glGetUniformLocation(program, "projection");
   auto inv_view_loc = glGetUniformLocation(program, "inv_view");
   auto inv_projection_loc = glGetUniformLocation(program, "inv_projection");
+  auto radius_loc = glGetUniformLocation(program, "radius");
 
   glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
   glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(proj));
   glUniformMatrix4fv(inv_view_loc, 1, GL_FALSE, glm::value_ptr(glm::inverse(view)));
   glUniformMatrix4fv(inv_projection_loc, 1, GL_FALSE, glm::value_ptr(glm::inverse(proj)));
+  glUniform1f(radius_loc, kParticleSize);
 
   glBindVertexArray(_vertex_array_object);
   glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, _num_particles);
